@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <item android:title="設定">
+        <menu>
+            <item
+                android:id="@+id/nav_credit_card"
+                android:icon="@drawable/nav_credit_card"
+                android:title="信用卡" />
+            <item
+                android:id="@+id/nav_favor_setting"
+                android:icon="@drawable/nav_favor_setting"
+                android:title="乘車設定" />
+        </menu>
+    </item>
+
+    <item android:title="">
+        <menu>
+            <item
+                android:id="@+id/nav_logout"
+                android:icon="@drawable/nav_logout"
+                android:title="@string/logout" />
+        </menu>
+    </item>
+</menu>
