@@ -1,7 +1,9 @@
-package com.example.picar;
+package com.example.piCarCustomer;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -10,6 +12,7 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.GravityCompat;
@@ -17,10 +20,12 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -32,12 +37,16 @@ import java.io.OutputStreamWriter;
 import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+        implements NavigationView.OnNavigationItemSelectedListener, OnMapReadyCallback {
     private final static String TAG = "MainActivity";
     private final static int SEQ_LOGIN = 0;
+    private final static int PERMISSION_REQUSET = 0;
+    private GoogleMap map;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,12 +76,16 @@ public class MainActivity extends AppCompatActivity
         SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
         String account = preferences.getString("account", "");
         String password = preferences.getString("password", "");
+        // ask Permission
+        askPermissions();
         if (preferences.getBoolean("login", false))
-            if(!isValidLogin(Util.URL, account, password))
+            if (!isValidLogin(Util.URL, account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
-            else;
-        else
-            startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+            else {
+                getSupportFragmentManager().beginTransaction()
+                                           .replace(R.id.frameLayout, new MapFragment(), "Map")
+                                           .commit();
+            }
     }
 
     @Override
@@ -88,18 +101,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK) {
-            if (requestCode == SEQ_LOGIN) {
-                String account = data.getStringExtra("account");
-                String password = data.getStringExtra("password");
-                if(!isValidLogin(Util.URL, account, password))
-                    startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
-            }
-        }
-    }
+
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
@@ -172,6 +174,19 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            if (requestCode == SEQ_LOGIN) {
+                String account = data.getStringExtra("account");
+                String password = data.getStringExtra("password");
+                if(!isValidLogin(Util.URL, account, password))
+                    startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+            }
+        }
+    }
+
     private static String getRemoteData(String url, String account, String password) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setDoInput(true);
@@ -197,12 +212,6 @@ public class MainActivity extends AppCompatActivity
         return jsonIn.toString();
     }
 
-    private boolean isNetworkConnected() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-        NetworkInfo info = connectivityManager.getActiveNetworkInfo();
-        return  info != null && info.isConnected();
-    }
-
     private boolean isValidLogin(String url, String account, String password) {
         SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
         if (isNetworkConnected()) {
@@ -223,15 +232,52 @@ public class MainActivity extends AppCompatActivity
                             .putString("account", account)
                             .putString("password", password)
                             .apply();
-                } else {
-                    return false;
+                    return true;
                 }
-            } else {
-                Log.e(TAG, "json is null");
-                return false;
             }
         }
 
-        return true;
+        return false;
+    }
+
+    private boolean isNetworkConnected() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo info = connectivityManager.getActiveNetworkInfo();
+        return  info != null && info.isConnected();
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        this.map = googleMap;
+    }
+
+    private void askPermissions() {
+        String[] permissions = { Manifest.permission.ACCESS_COARSE_LOCATION,
+                                 Manifest.permission.ACCESS_FINE_LOCATION
+                               };
+        Set<String> permissionRequest = new HashSet<>();
+        for (String permission: permissions) {
+            int result = checkSelfPermission(permission);
+            if (result != PackageManager.PERMISSION_GRANTED)
+                permissionRequest.add(permission);
+        }
+
+        if (!permissionRequest.isEmpty()) {
+            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[permissionRequest.size()]), PERMISSION_REQUSET);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUSET:
+                for (int result: grantResults)
+                    if (result != PackageManager.PERMISSION_GRANTED) {
+                        Toast.makeText(this, "Permission needed", Toast.LENGTH_LONG).show();
+                        finish();
+                        return;
+                    }
+                    break;
+        }
     }
 }

@@ -1,4 +1,4 @@
-package com.example.picar;
+package com.example.piCarCustomer;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -35,9 +35,7 @@ public class PreferenceFragment extends Fragment {
                         .putBoolean("babySeat", babySeat.isChecked())
                         .apply();
                 getActivity().getSupportFragmentManager()
-                             .beginTransaction()
-                             .detach(PreferenceFragment.this)
-                             .commit();
+                             .popBackStack();
             }
         });
         btnReset.setOnClickListener(new View.OnClickListener() {
@@ -56,5 +54,4 @@ public class PreferenceFragment extends Fragment {
 
         return view;
     }
-
 }

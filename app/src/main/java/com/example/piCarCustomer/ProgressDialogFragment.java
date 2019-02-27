@@ -1,4 +1,4 @@
-package com.example.picar;
+package com.example.piCarCustomer;
 
 import android.app.Dialog;
 import android.os.Bundle;

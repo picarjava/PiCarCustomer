@@ -1,4 +1,4 @@
-package com.example.picar;
+package com.example.piCarCustomer;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;

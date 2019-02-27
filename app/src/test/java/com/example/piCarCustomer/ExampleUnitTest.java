@@ -1,4 +1,4 @@
-package com.example.picar;
+package com.example.piCarCustomer;
 
 import org.junit.Test;
 

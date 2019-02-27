@@ -1,4 +1,4 @@
-package com.example.picar;
+package com.example.piCarCustomer;
 
 class Util {
     final static String URL = "http://10.0.2.2:8081/PiCar/memberApi";
