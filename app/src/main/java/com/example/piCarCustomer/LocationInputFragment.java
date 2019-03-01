@@ -14,14 +14,12 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
-import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.libraries.places.compat.AutocompleteFilter;
 import com.google.android.libraries.places.compat.AutocompletePrediction;
 import com.google.android.libraries.places.compat.PlaceBufferResponse;
 import com.google.android.libraries.places.compat.Places;
-import com.google.gson.Gson;
 
 public class LocationInputFragment extends Fragment {
     private final static String TAG = "LocationFragment";
@@ -45,26 +43,21 @@ public class LocationInputFragment extends Fragment {
                 final AutocompletePrediction item = adapter.getItem(position);
                 final String placeId = String.valueOf(item.getPlaceId());
                 Log.i(TAG, "Autocomplete item selected: " + item.getFullText(new StyleSpan(Typeface.BOLD)));
-
                 Places.getGeoDataClient(getActivity()).getPlaceById(placeId)
-                        .addOnSuccessListener(new OnSuccessListener<PlaceBufferResponse>() {
+                                                      .addOnSuccessListener(new OnSuccessListener<PlaceBufferResponse>() {
                             @Override
                             public void onSuccess(PlaceBufferResponse places) {
-                                Toast.makeText(getContext(), places.get(0).getAddress(), Toast.LENGTH_SHORT).show();
                                 // close keyboard
                                 InputMethodManager inputMethodManager = (InputMethodManager) getActivity().getSystemService(Activity.INPUT_METHOD_SERVICE);
                                 inputMethodManager.hideSoftInputFromWindow(getActivity().getCurrentFocus().getWindowToken(), 0);
-                                // pass clicked place to mapFragment
-                                Bundle bundle = new Bundle();
-                                bundle.putString("place", new Gson().toJson(places.get(0)));
-                                MapFragment mapFragment = new MapFragment();
-                                mapFragment.setArguments(bundle);
-                                getActivity().getSupportFragmentManager()
-                                             .beginTransaction()
-                                             .replace(R.id.frameLayout, mapFragment, "mapFragment")
-                                             .commit();
+                                // call back
+                                MapFragment mapFragment = (MapFragment) getActivity().getSupportFragmentManager()
+                                                                                     .findFragmentByTag("Map");
+                                if (mapFragment != null)
+                                    mapFragment.onPlaceInputCallBack(places.get(0));
                                 // pop LocationInputFragment from backStack
-                                getActivity().getSupportFragmentManager().popBackStack();
+                                getActivity().getSupportFragmentManager()
+                                             .popBackStack();
                             }
                         });
 

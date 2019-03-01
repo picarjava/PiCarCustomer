@@ -24,7 +24,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -45,7 +44,6 @@ public class MainActivity extends AppCompatActivity
     private final static String TAG = "MainActivity";
     private final static int SEQ_LOGIN = 0;
     private final static int PERMISSION_REQUSET = 0;
-    private GoogleMap map;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,7 +76,7 @@ public class MainActivity extends AppCompatActivity
         // ask Permission
         askPermissions();
         if (preferences.getBoolean("login", false))
-            if (!isValidLogin(Util.URL, account, password))
+            if (!isValidLogin(Util.URL + "/memberApi", account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
             else {
                 getSupportFragmentManager().beginTransaction()

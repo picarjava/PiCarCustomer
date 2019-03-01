@@ -57,14 +57,57 @@
     </LinearLayout>
 
     <android.support.v4.widget.NestedScrollView
+        android:id="@+id/bottomSheet"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="250dp"
+        android:translationZ="100dp"
+        android:fillViewport="true"
+        android:elevation="100dp"
+        android:outlineProvider="bounds"
+        android:background="@color/white"
+        app:layout_behavior="@string/bottom_sheet_behavior">
 
-        <LinearLayout
+        <android.support.constraint.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:id="@+id/callNormal"
+                android:layout_width="130dp"
+                android:layout_height="130dp"
+                android:layout_marginStart="60dp"
+                android:layout_marginTop="8dp"
+                android:src="@color/focused"
+                android:contentDescription="call"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:srcCompat="@tools:sample/avatars" />
+
+            <ImageView
+                android:id="@+id/drunk"
+                android:layout_width="130dp"
+                android:layout_height="130dp"
+                android:layout_marginStart="40dp"
+                android:layout_marginTop="8dp"
+                android:src="@drawable/dot_disabled"
+                android:contentDescription="drunk"
+                app:layout_constraintStart_toEndOf="@+id/callNormal"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:srcCompat="@tools:sample/avatars" />
+
+            <Button
+                android:id="@+id/callCar"
+                android:layout_width="349dp"
+                android:layout_height="67dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="invisible"
+                android:text="叫車服務"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+        </android.support.constraint.ConstraintLayout>
 
     </android.support.v4.widget.NestedScrollView>
 
