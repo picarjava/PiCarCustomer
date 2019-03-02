@@ -131,6 +131,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         singleOrder.setEndLoc((String) endLoc.getAddress());
                         singleOrder.setEndLat(endLoc.getLatLng().latitude);
                         singleOrder.setEndLng(endLoc.getLatLng().longitude);
+                        singleOrder.setState(0);
                         JsonObject jsonObject = new JsonObject();
                         jsonObject.addProperty("action", "insert");
                         jsonObject.addProperty("singleOrder", new Gson().toJson(singleOrder));
@@ -153,8 +154,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mapFragment.getMapAsync(this);
         locationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
         settingsClient = LocationServices.getSettingsClient(getActivity());
-        createLocationCallback();
-        buildSettingLocationRequest();
+//        createLocationCallback();
+//        buildSettingLocationRequest();
         return view;
     }
 
@@ -263,7 +264,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
                 bufferedWriter.write(strings[1]);
                 bufferedWriter.close();
-                connection.getResponseMessage();
+                connection.getInputStream().close();
                 connection.disconnect();
             } catch (IOException e) {
                 e.printStackTrace();
