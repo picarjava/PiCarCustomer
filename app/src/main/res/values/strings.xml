@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">PiCar</string>
+    <string name="app_name">PiCarCustomer</string>
     <string name="invalid_account_or_password">帳號或密碼錯誤</string>
     <string name="account">帳號</string>
     <string name="password">密碼</string>

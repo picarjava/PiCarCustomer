@@ -26,6 +26,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
 import java.io.BufferedReader;
@@ -181,7 +182,7 @@ public class MainActivity extends AppCompatActivity
             if (requestCode == REQ_LOGIN) {
                 String account = data.getStringExtra("account");
                 String password = data.getStringExtra("password");
-                if(!isValidLogin(Util.URL, account, password))
+                if(!isValidLogin(Util.URL + "/memberApi", account, password))
                     startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
             }
         }
@@ -195,6 +196,7 @@ public class MainActivity extends AppCompatActivity
         connection.setRequestMethod("POST");
         connection.setRequestProperty("content-type", "charset=utf-8;");
         JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("action", "login");
         jsonObject.addProperty("account", account);
         jsonObject.addProperty("password", password);
         BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
@@ -233,7 +235,7 @@ public class MainActivity extends AppCompatActivity
                             .putString("account", account)
                             .putString("password", password)
                             .apply();
-                    member = new Gson().fromJson(jsonObject.get("member").getAsString(), Member.class);
+                    member = new GsonBuilder().setDateFormat("yyyy-MM-dd").create().fromJson(jsonObject.get("member").getAsString(), Member.class);
                     return true;
                 }
             }

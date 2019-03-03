@@ -264,7 +264,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
                 bufferedWriter.write(strings[1]);
                 bufferedWriter.close();
-                connection.getInputStream().close();
                 connection.disconnect();
             } catch (IOException e) {
                 e.printStackTrace();
