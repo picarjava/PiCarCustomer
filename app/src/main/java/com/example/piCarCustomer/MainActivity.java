@@ -20,6 +20,7 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
@@ -42,8 +43,9 @@ import java.util.concurrent.ExecutionException;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
     private final static String TAG = "MainActivity";
-    private final static int SEQ_LOGIN = 0;
-    private final static int PERMISSION_REQUSET = 0;
+    private final static int REQ_LOGIN = 0;
+    private final static int PERMISSION_REQUEST = 0;
+    private static Member member = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +79,7 @@ public class MainActivity extends AppCompatActivity
         askPermissions();
         if (preferences.getBoolean("login", false))
             if (!isValidLogin(Util.URL + "/memberApi", account, password))
-                startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+                startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
             else {
                 getSupportFragmentManager().beginTransaction()
                                            .replace(R.id.frameLayout, new MapFragment(), "Map")
@@ -117,6 +119,7 @@ public class MainActivity extends AppCompatActivity
                                            .addToBackStack("PreferenceFragment")
                                            .commit();
         } else if (id == R.id.nav_logout) {
+            member = null;
             SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
             preferences.edit()
                        .putBoolean("login", false)
@@ -124,7 +127,7 @@ public class MainActivity extends AppCompatActivity
                        .putString("password", "")
                        .apply();
             Intent intent = new Intent(this, LoginActivity.class);
-            startActivityForResult(intent, SEQ_LOGIN);
+            startActivityForResult(intent, REQ_LOGIN);
         }
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -175,11 +178,11 @@ public class MainActivity extends AppCompatActivity
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK) {
-            if (requestCode == SEQ_LOGIN) {
+            if (requestCode == REQ_LOGIN) {
                 String account = data.getStringExtra("account");
                 String password = data.getStringExtra("password");
                 if(!isValidLogin(Util.URL, account, password))
-                    startActivityForResult(new Intent(this, LoginActivity.class), SEQ_LOGIN);
+                    startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
             }
         }
     }
@@ -222,13 +225,15 @@ public class MainActivity extends AppCompatActivity
             }
 
             if (jsonIn != null) {
-                String login = new Gson().fromJson(jsonIn, String.class);
-                if ("OK".equals(login)) {
+                Log.d(TAG, jsonIn);
+                JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
+                if (jsonObject.has("auth") && "OK".equals(jsonObject.get("auth").getAsString())) {
                     preferences.edit()
                             .putBoolean("login", true)
                             .putString("account", account)
                             .putString("password", password)
                             .apply();
+                    member = new Gson().fromJson(jsonObject.get("member").getAsString(), Member.class);
                     return true;
                 }
             }
@@ -255,21 +260,22 @@ public class MainActivity extends AppCompatActivity
         }
 
         if (!permissionRequest.isEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[permissionRequest.size()]), PERMISSION_REQUSET);
+            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[permissionRequest.size()]), PERMISSION_REQUEST);
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
-            case PERMISSION_REQUSET:
+            case PERMISSION_REQUEST:
                 for (int result: grantResults)
                     if (result != PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(this, "Permission needed", Toast.LENGTH_LONG).show();
                         finish();
                         return;
                     }
-                    break;
+
+                break;
         }
     }
 }
