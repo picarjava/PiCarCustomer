@@ -123,11 +123,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     Geocoder geocoder = new Geocoder(getActivity());
                     try {
                         List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                        Address address = addresses.get(0);
-                        singleOrder.setMemID("M001");
-                        singleOrder.setStartLoc(address.getAddressLine(0));
-                        singleOrder.setStartLat(address.getLatitude());
-                        singleOrder.setStartLng(address.getLongitude());
+                        if (!addresses.isEmpty()) {
+                            Address address = addresses.get(0);
+                            singleOrder.setMemID("M001");
+                            singleOrder.setStartLoc(address.getAddressLine(0));
+                            singleOrder.setStartLat(address.getLatitude());
+                            singleOrder.setStartLng(address.getLongitude());
+                        } else {
+                            singleOrder.setStartLat(location.getLatitude());
+                            singleOrder.setStartLng(location.getLongitude());
+                        }
+
                         singleOrder.setEndLoc((String) endLoc.getAddress());
                         singleOrder.setEndLat(endLoc.getLatLng().latitude);
                         singleOrder.setEndLng(endLoc.getLatLng().longitude);
@@ -142,7 +148,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                        Log.i(TAG, singleOrder.toString());
+                        Log.i(TAG, jsonObject.toString());
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -264,6 +270,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
                 bufferedWriter.write(strings[1]);
                 bufferedWriter.close();
+                connection.getResponseCode();
                 connection.disconnect();
             } catch (IOException e) {
                 e.printStackTrace();
