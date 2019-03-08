@@ -6,4 +6,7 @@ class Util {
     final static String preference = "preference";
     final static int NORMAL = 0;
     final static int DRUNK = 1;
+    final static double SCALE = 591657550.500000;
+    final static double LOG2 = Math.log10(2);
+    final static double METER_PER_DPI = 0.065;
 }

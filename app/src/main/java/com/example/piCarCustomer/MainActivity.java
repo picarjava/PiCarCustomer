@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity
     private final static String TAG = "MainActivity";
     private final static int REQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
-    private static Member member = null;
+    private Member member;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity
 
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                                               .setAction("Action", null).show());
+                .setAction("Action", null).show());
 
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView =  findViewById(R.id.nav_view);
+        NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
         SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
@@ -77,8 +77,8 @@ public class MainActivity extends AppCompatActivity
                 startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
             else {
                 getSupportFragmentManager().beginTransaction()
-                                           .replace(R.id.frameLayout, new MapFragment(), "Map")
-                                           .commit();
+                        .replace(R.id.frameLayout, new MapFragment(), "Map")
+                        .commit();
             }
     }
 
@@ -96,7 +96,6 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
@@ -110,17 +109,17 @@ public class MainActivity extends AppCompatActivity
             Fragment preferenceFrag = manager.findFragmentByTag("Preference");
             if (preferenceFrag == null || preferenceFrag.isDetached())
                 getSupportFragmentManager().beginTransaction()
-                                           .replace(R.id.frameLayout, new PreferenceFragment(), "Preference")
-                                           .addToBackStack("PreferenceFragment")
-                                           .commit();
+                        .replace(R.id.frameLayout, new PreferenceFragment(), "Preference")
+                        .addToBackStack("PreferenceFragment")
+                        .commit();
         } else if (id == R.id.nav_logout) {
             member = null;
             SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
             preferences.edit()
-                       .putBoolean("login", false)
-                       .putString("account", "")
-                       .putString("password", "")
-                       .apply();
+                    .putBoolean("login", false)
+                    .putString("account", "")
+                    .putString("password", "")
+                    .apply();
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, REQ_LOGIN);
         }
@@ -133,6 +132,7 @@ public class MainActivity extends AppCompatActivity
     private static class LoginTask extends AsyncTask<String, Void, String> {
         private WeakReference<MainActivity> context;
         private ProgressDialogFragment fragment;
+
         LoginTask(MainActivity context) {
             this.context = new WeakReference<>(context);
         }
@@ -176,7 +176,7 @@ public class MainActivity extends AppCompatActivity
             if (requestCode == REQ_LOGIN) {
                 String account = data.getStringExtra("account");
                 String password = data.getStringExtra("password");
-                if(!isValidLogin(Util.URL + "/memberApi", account, password))
+                if (!isValidLogin(Util.URL + "/memberApi", account, password))
                     startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
             }
         }
@@ -241,15 +241,15 @@ public class MainActivity extends AppCompatActivity
     private boolean isNetworkConnected() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         NetworkInfo info = connectivityManager.getActiveNetworkInfo();
-        return  info != null && info.isConnected();
+        return info != null && info.isConnected();
     }
 
     private void askPermissions() {
-        String[] permissions = { Manifest.permission.ACCESS_COARSE_LOCATION,
-                                 Manifest.permission.ACCESS_FINE_LOCATION
-                               };
+        String[] permissions = {Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+        };
         Set<String> permissionRequest = new HashSet<>();
-        for (String permission: permissions) {
+        for (String permission : permissions) {
             int result = checkSelfPermission(permission);
             if (result != PackageManager.PERMISSION_GRANTED)
                 permissionRequest.add(permission);
@@ -264,7 +264,7 @@ public class MainActivity extends AppCompatActivity
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         switch (requestCode) {
             case PERMISSION_REQUEST:
-                for (int result: grantResults)
+                for (int result : grantResults)
                     if (result != PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(this, "Permission needed", Toast.LENGTH_LONG).show();
                         finish();
