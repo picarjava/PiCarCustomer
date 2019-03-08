@@ -53,33 +53,34 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show());
-
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
-
         NavigationView navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-
         SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
         String account = preferences.getString("account", "");
         String password = preferences.getString("password", "");
         // ask Permission
         askPermissions();
-        if (preferences.getBoolean("login", false))
+        if (preferences.getBoolean("login", false)) {
             if (!isValidLogin(Util.URL + "/memberApi", account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
-            else {
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.frameLayout, new MapFragment(), "Map")
-                        .commit();
-            }
+        } else
+            startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        getSupportFragmentManager().beginTransaction()
+                                   .replace(R.id.frameLayout, new MapFragment(), "Map")
+                                   .commit();
     }
 
     @Override
@@ -94,7 +95,6 @@ public class MainActivity extends AppCompatActivity
                 super.onBackPressed();
         }
     }
-
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
