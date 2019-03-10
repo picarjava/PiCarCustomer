@@ -12,7 +12,17 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Switch;
 
+import com.google.gson.JsonObject;
+
 public class PreferenceFragment extends Fragment {
+    private MemberCallBack memberCallBack;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        memberCallBack = (MemberCallBack) context;
+    }
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
@@ -29,11 +39,22 @@ public class PreferenceFragment extends Fragment {
         btnSubmit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                boolean havePet = pet.isChecked();
+                boolean canSmoke = smoke.isChecked();
+                boolean haveBabySeat = babySeat.isChecked();
+                Member member = memberCallBack.memberCallBack();
                 preferences.edit()
-                        .putBoolean("smoke", smoke.isChecked())
-                        .putBoolean("pet", pet.isChecked())
-                        .putBoolean("babySeat", babySeat.isChecked())
-                        .apply();
+                           .putBoolean("smoke", canSmoke)
+                           .putBoolean("pet", havePet)
+                           .putBoolean("babySeat", haveBabySeat)
+                           .apply();
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.addProperty("action", "updatePreference");
+                jsonObject.addProperty("pet", havePet? 1: 0);
+                jsonObject.addProperty("smoke", canSmoke? 1: 0);
+                jsonObject.addProperty("babySeat", haveBabySeat? 1: 0);
+                jsonObject.addProperty("memID", member.getMemID());
+                new JsonTask().execute("/memberApi", jsonObject.toString());
                 getActivity().getSupportFragmentManager()
                              .popBackStack();
             }

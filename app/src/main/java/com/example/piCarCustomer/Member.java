@@ -1,13 +1,14 @@
 package com.example.piCarCustomer;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.sql.Date;
 
-public class Member {
-
+public class Member implements Parcelable {
     private String memID;
     private String name;
     private String email;
-    private String password;
     private String phone;
     private String creditCard;
     private Integer pet;
@@ -18,7 +19,6 @@ public class Member {
     private Date birthday;
     private Integer verified;
     private Integer babySeat;
-
 
     public String getMemID() {
         return memID;
@@ -42,14 +42,6 @@ public class Member {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getPhone() {
@@ -131,4 +123,55 @@ public class Member {
     public void setBabySeat(Integer babySeat) {
         this.babySeat = babySeat;
     }
+
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(this.memID);
+        dest.writeString(this.name);
+        dest.writeString(this.email);
+        dest.writeString(this.phone);
+        dest.writeString(this.creditCard);
+        dest.writeInt(this.pet);
+        dest.writeInt(this.smoke);
+        dest.writeInt(this.gender);
+        dest.writeInt(this.token);
+        dest.writeInt(this.activityToken);
+        dest.writeLong(this.birthday.getTime());
+        dest.writeInt(this.verified);
+        dest.writeInt(this.babySeat);
+    }
+
+    protected Member(Parcel in) {
+        this.memID = in.readString();
+        this.name = in.readString();
+        this.email = in.readString();
+        this.phone = in.readString();
+        this.creditCard = in.readString();
+        this.pet = in.readInt();
+        this.smoke = in.readInt();
+        this.gender = in.readInt();
+        this.token = in.readInt();
+        this.activityToken = in.readInt();
+        this.birthday = new Date(in.readLong());
+        this.verified = in.readInt();
+        this.babySeat = in.readInt();
+    }
+
+    public static final Parcelable.Creator<Member> CREATOR = new Parcelable.Creator<Member>() {
+        @Override
+        public Member createFromParcel(Parcel source) {
+            return new Member(source);
+        }
+
+        @Override
+        public Member[] newArray(int size) {
+            return new Member[size];
+        }
+    };
 }

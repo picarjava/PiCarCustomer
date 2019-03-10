@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -20,8 +22,12 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Base64;
 import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -40,12 +46,14 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, MemberCallBack {
     private final static String TAG = "MainActivity";
     private final static int REQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
     private Member member;
+    private Bitmap picture;
+    private SharedPreferences preferences;
+    private NavigationView navigationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,26 +69,51 @@ public class MainActivity extends AppCompatActivity
                 this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.addDrawerListener(toggle);
         toggle.syncState();
-        NavigationView navigationView = findViewById(R.id.nav_view);
+        navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-        SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
-        String account = preferences.getString("account", "");
-        String password = preferences.getString("password", "");
+        preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
         // ask Permission
         askPermissions();
+        Log.d(TAG, "create");
         if (preferences.getBoolean("login", false)) {
+            String account = preferences.getString("account", "");
+            String password = preferences.getString("password", "");
             if (!isValidLogin(Util.URL + "/memberApi", account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
+            else
+                setLoginInfo();
+            Log.d(TAG, "valid");
         } else
             startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG, "start");
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+        Log.d(TAG, "resume");
         getSupportFragmentManager().beginTransaction()
                                    .replace(R.id.frameLayout, new MapFragment(), "Map")
                                    .commit();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Bundle bundle = new Bundle();
+        bundle.putParcelable("member", member);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        member = savedInstanceState.getParcelable("member");
+        Log.d(TAG, "restore");
     }
 
     @Override
@@ -114,12 +147,11 @@ public class MainActivity extends AppCompatActivity
                         .commit();
         } else if (id == R.id.nav_logout) {
             member = null;
-            SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
             preferences.edit()
-                    .putBoolean("login", false)
-                    .putString("account", "")
-                    .putString("password", "")
-                    .apply();
+                       .putBoolean("login", false)
+                       .putString("account", "")
+                       .putString("password", "")
+                       .apply();
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, REQ_LOGIN);
         }
@@ -178,6 +210,8 @@ public class MainActivity extends AppCompatActivity
                 String password = data.getStringExtra("password");
                 if (!isValidLogin(Util.URL + "/memberApi", account, password))
                     startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
+                else
+                    setLoginInfo();
             }
         }
     }
@@ -209,7 +243,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private boolean isValidLogin(String url, String account, String password) {
-        SharedPreferences preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
         if (isNetworkConnected()) {
             String jsonIn = null;
             try {
@@ -225,17 +258,49 @@ public class MainActivity extends AppCompatActivity
                 JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
                 if (jsonObject.has("auth") && "OK".equals(jsonObject.get("auth").getAsString())) {
                     preferences.edit()
-                            .putBoolean("login", true)
-                            .putString("account", account)
-                            .putString("password", password)
-                            .apply();
-                    member = new GsonBuilder().setDateFormat("yyyy-MM-dd").create().fromJson(jsonObject.get("member").getAsString(), Member.class);
+                               .putBoolean("login", true)
+                               .putString("account", account)
+                               .putString("password", password)
+                               .apply();
+                    member = new GsonBuilder().setDateFormat("yyyy-MM-dd")
+                                              .create()
+                                              .fromJson(jsonObject.get("member").getAsString(), Member.class);
+                    try {
+                        jsonObject = new JsonObject();
+                        jsonObject.addProperty("action", "getPicture");
+                        jsonObject.addProperty("memID", member.getMemID());
+                        String encodePicture = new JsonTask().execute("/memberApi", jsonObject.toString()).get();
+                        Log.d(TAG, encodePicture);
+                        byte[] binaryPicture = Base64.decode(encodePicture, Base64.DEFAULT);
+                        picture = BitmapFactory.decodeByteArray(binaryPicture, 0, binaryPicture.length);
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    private void setLoginInfo() {
+        View headerView = navigationView.getHeaderView(0);
+        TextView name = headerView.findViewById(R.id.name);
+        ImageView imageView = headerView.findViewById(R.id.imageView);
+        name.setText(member.getName());
+        if (picture != null)
+            imageView.setImageBitmap(picture);
+        else
+            imageView.setImageResource(R.drawable.headshot);
+
+        preferences.edit()
+                .putBoolean("pet", member.getPet() == 1)
+                .putBoolean("smoke", member.getSmoke() == 1)
+                .putBoolean("babySeat", member.getBabySeat() == 1)
+                .apply();
     }
 
     private boolean isNetworkConnected() {
@@ -273,5 +338,10 @@ public class MainActivity extends AppCompatActivity
 
                 break;
         }
+    }
+
+    @Override
+    public Member memberCallBack() {
+        return member;
     }
 }
