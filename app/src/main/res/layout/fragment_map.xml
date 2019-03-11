@@ -23,9 +23,9 @@
         android:id="@+id/linearLayout"
         android:layout_width="267dp"
         android:layout_height="137dp"
-        android:layout_marginStart="72dp"
         android:layout_marginTop="72dp"
-        android:background="@drawable/shape"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/white_circle"
         android:orientation="vertical"
         android:outlineProvider="background"
         android:translationZ="10dp">

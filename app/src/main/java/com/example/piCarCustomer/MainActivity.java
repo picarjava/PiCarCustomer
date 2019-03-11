@@ -15,15 +15,13 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
@@ -59,16 +57,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+
         FloatingActionButton fab = findViewById(R.id.fab);
         fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                 .setAction("Action", null).show());
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
-                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-        drawer.addDrawerListener(toggle);
-        toggle.syncState();
+        ImageView hamburger = findViewById(R.id.hamburger);
+        hamburger.setOnClickListener(v -> drawer.openDrawer(Gravity.START));
         navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
         preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
@@ -134,17 +129,21 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
-
+        FragmentManager manager = getSupportFragmentManager();
         if (id == R.id.nav_credit_card) {
-
+            String creditCard = "CreditCard";
+            manager.popBackStack(creditCard, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            manager.beginTransaction()
+                   .replace(R.id.frameLayout, new CreditCardFragment(), creditCard)
+                   .addToBackStack(creditCard)
+                   .commit();
         } else if (id == R.id.nav_favor_setting) {
-            FragmentManager manager = getSupportFragmentManager();
-            Fragment preferenceFrag = manager.findFragmentByTag("Preference");
-            if (preferenceFrag == null || preferenceFrag.isDetached())
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.frameLayout, new PreferenceFragment(), "Preference")
-                        .addToBackStack("PreferenceFragment")
-                        .commit();
+            String preference = "Preference";
+            manager.popBackStack(preference, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            manager.beginTransaction()
+                   .replace(R.id.frameLayout, new PreferenceFragment(), preference)
+                   .addToBackStack(preference)
+                   .commit();
         } else if (id == R.id.nav_logout) {
             member = null;
             preferences.edit()
@@ -297,10 +296,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             imageView.setImageResource(R.drawable.headshot);
 
         preferences.edit()
-                .putBoolean("pet", member.getPet() == 1)
-                .putBoolean("smoke", member.getSmoke() == 1)
-                .putBoolean("babySeat", member.getBabySeat() == 1)
-                .apply();
+                   .putBoolean("pet", member.getPet() == 1)
+                   .putBoolean("smoke", member.getSmoke() == 1)
+                   .putBoolean("babySeat", member.getBabySeat() == 1)
+                   .apply();
     }
 
     private boolean isNetworkConnected() {
