@@ -1,6 +1,8 @@
-package com.example.piCarCustomer;
+package com.example.piCarCustomer.task;
 
 import android.os.AsyncTask;
+
+import com.example.piCarCustomer.Util;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -10,7 +12,7 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class JsonTask extends AsyncTask<String, Void, String> {
+public class CommonTask extends AsyncTask<String, Void, String> {
 
     @Override
     protected String doInBackground(String... strings) {

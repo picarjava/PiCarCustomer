@@ -1,6 +1,7 @@
 package com.example.piCarCustomer;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
@@ -10,8 +11,11 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.BottomSheetDialogFragment;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.NestedScrollView;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,6 +25,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.example.piCarCustomer.task.CommonTask;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -31,7 +36,6 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.libraries.places.compat.Place;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -42,17 +46,23 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.DecimalFormat;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
     private final static String TAG = "MapFragment";
     private FusedLocationProviderClient locationProviderClient;
+    private AppCompatActivity activity;
     private Location location;
     private Place endLoc;
     private GoogleMap map;
-    NestedScrollView bottomSheet;
+    private NestedScrollView bottomSheet;
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        activity = (AppCompatActivity) context;
+    }
 
     @SuppressLint("MissingPermission")
     @Nullable
@@ -62,7 +72,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         View view = inflater.inflate(R.layout.fragment_map, container, false);
         bottomSheet = view.findViewById(R.id.bottomSheet);
         TextView whereGo = view.findViewById(R.id.whereGo);
-        whereGo.setOnClickListener(view1 -> getActivity().getSupportFragmentManager()
+        FloatingActionButton fab = view.findViewById(R.id.fab);
+        fab.setOnClickListener(v -> Snackbar.make(v, "Replace with your own action", Snackbar.LENGTH_LONG)
+                .setAction("Action", null).show());
+        whereGo.setOnClickListener(view1 -> activity.getSupportFragmentManager()
                                                          .beginTransaction()
                                                          .replace(R.id.frameLayout, new LocationInputFragment(), "locationInput")
                                                          .addToBackStack("locationInput")
@@ -99,7 +112,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             bottomSheet.setVisibility(View.GONE);
 
         mapFragment.getMapAsync(this);
-        locationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        locationProviderClient = LocationServices.getFusedLocationProviderClient(activity);
         return view;
     }
 
@@ -108,69 +121,60 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         ImageView drunk = view.findViewById(R.id.drunk);
         final Button callCar = view.findViewById(R.id.callCar);
         final SingleOrder singleOrder = new SingleOrder();
-        callNormal.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                singleOrder.setOrderType(Util.NORMAL);
-                callCar.setText("一般叫車");
-                callCar.setVisibility(View.VISIBLE);
-            }
+        callNormal.setOnClickListener(view1 -> {
+            singleOrder.setOrderType(Util.NORMAL);
+            callCar.setText("一般叫車");
+            callCar.setVisibility(View.VISIBLE);
         });
-        drunk.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                singleOrder.setOrderType(Util.DRUNK);
-                callCar.setText("代駕");
-                callCar.setVisibility(View.VISIBLE);
-            }
+        drunk.setOnClickListener(view12 -> {
+            singleOrder.setOrderType(Util.DRUNK);
+            callCar.setText("代駕");
+            callCar.setVisibility(View.VISIBLE);
         });
 
-        callCar.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Geocoder geocoder = new Geocoder(getActivity());
+        callCar.setOnClickListener(view13 -> {
+            Geocoder geocoder = new Geocoder(getActivity());
+            try {
+                List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                if (!addresses.isEmpty()) {
+                    Address address = addresses.get(0);
+                    singleOrder.setMemID("M001");
+                    singleOrder.setStartLoc(address.getAddressLine(0));
+                }
+
+                singleOrder.setStartLat(location.getLatitude());
+                singleOrder.setStartLng(location.getLongitude());
+                singleOrder.setEndLoc((String) endLoc.getAddress());
+                singleOrder.setEndLat(endLoc.getLatLng().latitude);
+                singleOrder.setEndLng(endLoc.getLatLng().longitude);
+                singleOrder.setState(0);
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.addProperty("action", "insert");
+                jsonObject.addProperty("singleOrder", new Gson().toJson(singleOrder));
+                bottomSheet.setVisibility(View.GONE);
+                String jsonIn;
                 try {
-                    List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                    if (!addresses.isEmpty()) {
-                        Address address = addresses.get(0);
-                        singleOrder.setMemID("M001");
-                        singleOrder.setStartLoc(address.getAddressLine(0));
-                    }
-
-                    singleOrder.setStartLat(location.getLatitude());
-                    singleOrder.setStartLng(location.getLongitude());
-                    singleOrder.setEndLoc((String) endLoc.getAddress());
-                    singleOrder.setEndLat(endLoc.getLatLng().latitude);
-                    singleOrder.setEndLng(endLoc.getLatLng().longitude);
-                    singleOrder.setState(0);
-                    JsonObject jsonObject = new JsonObject();
-                    jsonObject.addProperty("action", "insert");
-                    jsonObject.addProperty("singleOrder", new Gson().toJson(singleOrder));
-                    bottomSheet.setVisibility(View.GONE);
-                    String jsonIn;
-                    try {
-                        jsonIn = new JsonTask().execute("/singleOrderApi", jsonObject.toString()).get();
-                        Gson gson = new Gson();
-                        jsonObject = gson.fromJson(jsonIn, JsonObject.class);
-                        String driverName = jsonObject.get("driverName").getAsString();
-                        String plateNum = jsonObject.get("plateNum").getAsString();
-                        String carType = jsonObject.get("carType").getAsString();
-                        BottomSheetDialogFragment bottomSheetDialogFragment = new BottomSheetFragment();
-                        Bundle bundle = new Bundle();
-                        bundle.putString("driverName", driverName);
-                        bundle.putString("plateNum", plateNum);
-                        bundle.putString("carType", carType);
-                        bottomSheetDialogFragment.setArguments(bundle);
-                        bottomSheetDialogFragment.show(getChildFragmentManager(), bottomSheetDialogFragment.getTag());
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    Log.i(TAG, jsonObject.toString());
-                } catch (IOException e) {
+                    jsonIn = new CommonTask().execute("/singleOrderApi", jsonObject.toString()).get();
+                    Gson gson = new Gson();
+                    jsonObject = gson.fromJson(jsonIn, JsonObject.class);
+                    String driverName = jsonObject.get("driverName").getAsString();
+                    String plateNum = jsonObject.get("plateNum").getAsString();
+                    String carType = jsonObject.get("carType").getAsString();
+                    BottomSheetDialogFragment bottomSheetDialogFragment = new BottomSheetFragment();
+                    Bundle bundle = new Bundle();
+                    bundle.putString("driverName", driverName);
+                    bundle.putString("plateNum", plateNum);
+                    bundle.putString("carType", carType);
+                    bottomSheetDialogFragment.setArguments(bundle);
+                    bottomSheetDialogFragment.show(getChildFragmentManager(), bottomSheetDialogFragment.getTag());
+                } catch (ExecutionException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                Log.i(TAG, jsonObject.toString());
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         });
     }
@@ -179,35 +183,27 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
-        locationProviderClient.getLastLocation().addOnSuccessListener(getActivity(), new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
-                MapFragment.this.location = location;
-                LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                CameraPosition cameraPosition;
-                if (endLoc == null) {
-                    cameraPosition = new CameraPosition.Builder()
-                                                       .target(latLng)
-                                                       .zoom(15)
-                                                       .build();
-                } else {
-                    LatLngBounds latLngBounds = LatLngBounds.builder()
-                                                            .include(new LatLng(location.getLatitude(), location.getLongitude()))
-                                                            .include(endLoc.getLatLng())
-                                                            .build();
-                    int level = calculateZoomLevel(latLng, endLoc.getLatLng());
-                    LatLng center = latLngBounds.getCenter();
-                    center = new LatLng((center.latitude + latLngBounds.southwest.latitude) / 2, center.longitude);
-                    map.setLatLngBoundsForCameraTarget(latLngBounds);
-                    cameraPosition = new CameraPosition.Builder()
-                                                       .target(center)
-                                                       .zoom(level)
-                                                       .build();
-                    Log.d(TAG, String.valueOf(level));
-                    map.setMyLocationEnabled(true);
-                }
-
+        locationProviderClient.getLastLocation().addOnSuccessListener(activity, location -> {
+            MapFragment.this.location = location;
+            LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+            CameraPosition cameraPosition;
+            if (endLoc == null) {
+                cameraPosition = new CameraPosition.Builder()
+                                                   .target(latLng)
+                                                   .zoom(15)
+                                                   .build();
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+            } else {
+                LatLngBounds latLngBounds = LatLngBounds.builder()
+                                                        .include(new LatLng(location.getLatitude(), location.getLongitude()))
+                                                        .include(endLoc.getLatLng())
+                                                        .build();
+                LatLng center = latLngBounds.getCenter();
+                center = new LatLng(center.latitude - Math.abs(endLoc.getLatLng().latitude - location.getLatitude()), center.longitude);
+                latLngBounds = latLngBounds.including(center);
+                Log.d(TAG, center.toString());
+                map.animateCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 100));
+                map.setMyLocationEnabled(true);
             }
         });
     }
@@ -217,7 +213,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private static class DirectionTask extends AsyncTask<String, Void, String> {
-        private final static String TAG = "JsonTask";
+        private final static String TAG = "CommonTask";
 
         @Override
         protected String doInBackground(String... strings) {
@@ -244,35 +240,5 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             return null;
         }
-    }
-
-    private int calculateZoomLevel(LatLng point1, LatLng point2) {
-        double distance = calculationByDistance(point1, point2) * 1000 * Util.METER_PER_DPI;
-        return  (int) (Math.log10(Util.SCALE / Math.pow(distance, 2)) / Util.LOG2) + 1;
-    }
-
-    private double calculationByDistance(LatLng StartP, LatLng EndP) {
-        int Radius = 6371;// radius of earth in Km
-        double lat1 = StartP.latitude;
-        double lat2 = EndP.latitude;
-        double lon1 = StartP.longitude;
-        double lon2 = EndP.longitude;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                   Math.cos(Math.toRadians(lat1)) *
-                   Math.cos(Math.toRadians(lat2)) *
-                   Math.sin(dLon / 2) *
-                   Math.sin(dLon / 2);
-        double c = 2 * Math.asin(Math.sqrt(a));
-        double valueResult = Radius * c;
-        double km = valueResult / 1;
-        DecimalFormat newFormat = new DecimalFormat("####");
-        int kmInDec = Integer.valueOf(newFormat.format(km));
-        double meter = valueResult % 1000;
-        int meterInDec = Integer.valueOf(newFormat.format(meter));
-        Log.i(TAG, "" + valueResult + "   KM  " + kmInDec
-                + " Meter   " + meterInDec);
-        return Radius * c;
     }
 }

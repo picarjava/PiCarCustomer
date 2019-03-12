@@ -56,12 +56,23 @@
             android:text="TextView" />
     </LinearLayout>
 
+    <android.support.design.widget.FloatingActionButton
+        android:id="@+id/fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/fab_margin"
+        android:backgroundTint="@color/focused"
+        app:borderWidth="0dp"
+        app:srcCompat="@android:drawable/ic_menu_camera" />
+
     <android.support.v4.widget.NestedScrollView
         android:id="@+id/bottomSheet"
         android:layout_width="match_parent"
         android:layout_height="250dp"
         android:translationZ="100dp"
         android:fillViewport="true"
+        android:visibility="invisible"
         android:elevation="100dp"
         android:outlineProvider="bounds"
         android:background="@color/white"

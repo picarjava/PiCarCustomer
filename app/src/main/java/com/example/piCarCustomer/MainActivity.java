@@ -4,22 +4,16 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MenuItem;
@@ -28,18 +22,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.piCarCustomer.task.CommonTask;
+import com.example.piCarCustomer.task.ImageTask;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.lang.ref.WeakReference;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -49,7 +37,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private final static int REQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
     private Member member;
-    private Bitmap picture;
     private SharedPreferences preferences;
     private NavigationView navigationView;
 
@@ -58,9 +45,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show());
+
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ImageView hamburger = findViewById(R.id.hamburger);
         hamburger.setOnClickListener(v -> drawer.openDrawer(Gravity.START));
@@ -73,7 +58,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         if (preferences.getBoolean("login", false)) {
             String account = preferences.getString("account", "");
             String password = preferences.getString("password", "");
-            if (!isValidLogin(Util.URL + "/memberApi", account, password))
+            if (isInvalidLogin(account, password))
                 startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
             else
                 setLoginInfo();
@@ -160,46 +145,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         return true;
     }
 
-    private static class LoginTask extends AsyncTask<String, Void, String> {
-        private WeakReference<MainActivity> context;
-        private ProgressDialogFragment fragment;
-
-        LoginTask(MainActivity context) {
-            this.context = new WeakReference<>(context);
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            MainActivity mainActivity = context.get();
-            if (mainActivity != null) {
-                fragment = new ProgressDialogFragment();
-                fragment.show(mainActivity.getSupportFragmentManager(), "TTT");
-            }
-        }
-
-        @Override
-        protected String doInBackground(String... strings) {
-            String url = strings[0];
-            String account = strings[1];
-            String password = strings[2];
-            String jsonIn = null;
-            try {
-                jsonIn = getRemoteData(url, account, password);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            return jsonIn;
-        }
-
-        @Override
-        protected void onPostExecute(String jsonIn) {
-            fragment.dismiss();
-            super.onPostExecute(jsonIn);
-        }
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -207,7 +152,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             if (requestCode == REQ_LOGIN) {
                 String account = data.getStringExtra("account");
                 String password = data.getStringExtra("password");
-                if (!isValidLogin(Util.URL + "/memberApi", account, password))
+                if (isInvalidLogin(account, password))
                     startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
                 else
                     setLoginInfo();
@@ -215,37 +160,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
-    private static String getRemoteData(String url, String account, String password) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setDoInput(true);
-        connection.setDoOutput(true);
-        connection.setUseCaches(false);
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("content-type", "charset=utf-8;");
-        JsonObject jsonObject = new JsonObject();
-        jsonObject.addProperty("action", "login");
-        jsonObject.addProperty("account", account);
-        jsonObject.addProperty("password", password);
-        BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-        bufferedWriter.write(jsonObject.toString());
-        bufferedWriter.close();
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        StringBuilder jsonIn = new StringBuilder();
-        String line;
-        while ((line = bufferedReader.readLine()) != null) {
-            jsonIn.append(line);
-        }
-
-        bufferedReader.close();
-        connection.disconnect();
-        return jsonIn.toString();
-    }
-
-    private boolean isValidLogin(String url, String account, String password) {
+    private boolean isInvalidLogin(String account, String password) {
         if (isNetworkConnected()) {
             String jsonIn = null;
             try {
-                jsonIn = new LoginTask(this).execute(url, account, password).get();
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.addProperty("action", "login");
+                jsonObject.addProperty("account", account);
+                jsonObject.addProperty("password", password);
+                jsonIn = new CommonTask().execute("/memberApi", jsonObject.toString()).get();
             } catch (ExecutionException e) {
                 e.printStackTrace();
             } catch (InterruptedException e) {
@@ -264,37 +187,22 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     member = new GsonBuilder().setDateFormat("yyyy-MM-dd")
                                               .create()
                                               .fromJson(jsonObject.get("member").getAsString(), Member.class);
-                    try {
-                        jsonObject = new JsonObject();
-                        jsonObject.addProperty("action", "getPicture");
-                        jsonObject.addProperty("memID", member.getMemID());
-                        String encodePicture = new JsonTask().execute("/memberApi", jsonObject.toString()).get();
-                        Log.d(TAG, encodePicture);
-                        byte[] binaryPicture = Base64.decode(encodePicture, Base64.DEFAULT);
-                        picture = BitmapFactory.decodeByteArray(binaryPicture, 0, binaryPicture.length);
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    return true;
+                    jsonObject = new JsonObject();
+                    jsonObject.addProperty("action", "getPicture");
+                    jsonObject.addProperty("memID", member.getMemID());
+                    new ImageTask(this).execute("/memberApi", jsonObject.toString());
+                    return false;
                 }
             }
         }
 
-        return false;
+        return true;
     }
 
     private void setLoginInfo() {
         View headerView = navigationView.getHeaderView(0);
         TextView name = headerView.findViewById(R.id.name);
-        ImageView imageView = headerView.findViewById(R.id.imageView);
         name.setText(member.getName());
-        if (picture != null)
-            imageView.setImageBitmap(picture);
-        else
-            imageView.setImageResource(R.drawable.headshot);
-
         preferences.edit()
                    .putBoolean("pet", member.getPet() == 1)
                    .putBoolean("smoke", member.getSmoke() == 1)

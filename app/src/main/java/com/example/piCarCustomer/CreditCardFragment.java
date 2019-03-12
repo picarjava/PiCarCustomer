@@ -17,6 +17,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.example.piCarCustomer.task.CommonTask;
 import com.google.gson.JsonObject;
 
 public class CreditCardFragment extends Fragment {
@@ -93,7 +94,7 @@ public class CreditCardFragment extends Fragment {
                 jsonObject.addProperty("action", "updateCreditCard");
                 jsonObject.addProperty("creditCard", cardNum);
                 jsonObject.addProperty("memID", member.getMemID());
-                new JsonTask().execute("/memberApi", jsonObject.toString());
+                new CommonTask().execute("/memberApi", jsonObject.toString());
                 getFragmentManager().popBackStack();
             }
         });

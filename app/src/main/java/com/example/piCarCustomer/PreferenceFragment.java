@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Switch;
 
+import com.example.piCarCustomer.task.CommonTask;
 import com.google.gson.JsonObject;
 
 public class PreferenceFragment extends Fragment {
@@ -54,7 +55,7 @@ public class PreferenceFragment extends Fragment {
                 jsonObject.addProperty("smoke", canSmoke? 1: 0);
                 jsonObject.addProperty("babySeat", haveBabySeat? 1: 0);
                 jsonObject.addProperty("memID", member.getMemID());
-                new JsonTask().execute("/memberApi", jsonObject.toString());
+                new CommonTask().execute("/memberApi", jsonObject.toString());
                 getActivity().getSupportFragmentManager()
                              .popBackStack();
             }
