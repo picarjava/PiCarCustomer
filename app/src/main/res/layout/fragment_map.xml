@@ -122,4 +122,11 @@
 
     </android.support.v4.widget.NestedScrollView>
 
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="Button" />
+
 </android.support.design.widget.CoordinatorLayout>

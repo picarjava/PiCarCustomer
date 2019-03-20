@@ -37,9 +37,6 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name="com.example.piCarCustomer.MapsActivity"
-            android:label="@string/title_activity_maps"></activity>
-        <activity
             android:name="com.example.piCarCustomer.MainActivity"
             android:label="@string/app_name"
             android:theme="@style/AppTheme.NoActionBar">

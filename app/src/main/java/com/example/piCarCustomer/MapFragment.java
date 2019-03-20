@@ -19,7 +19,6 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.NestedScrollView;
 import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -58,16 +57,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private final static int RES_SCANNER = 0;
     private final static String SCANNER_PACKAGE = "com.google.zxing.client.android";
     private FusedLocationProviderClient locationProviderClient;
-    private AppCompatActivity activity;
-    private Location location;
-    private Place endLoc;
+    private MainActivity activity;
+    private Location callCarLocation;
+    private Place takeOffLoc;
+    private LatLng startLatLng, endLatLng;
     private GoogleMap map;
     private NestedScrollView bottomSheet;
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        activity = (AppCompatActivity) context;
+        activity = (MainActivity) context;
     }
 
     @SuppressLint("MissingPermission")
@@ -84,7 +84,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             try {
                 startActivityForResult(intent, 0);
             } catch (ActivityNotFoundException e) {
-                Log.d(TAG, "sss");
+                Log.d(TAG, "not find scanner package");
                 showDownloadDialog();
             }
         });
@@ -101,20 +101,30 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                      .commit();
         }
 
+        mapFragment.getMapAsync(this);
         NestedScrollView bottomSheet = view.findViewById(R.id.bottomSheet);
-        if (endLoc != null) {
-            Log.i(TAG, "success get endLoc");
+        if (takeOffLoc != null) {
+            Log.i(TAG, "success get takeOffLoc");
             bottomSheet.setVisibility(View.VISIBLE);
             bindBottomSheet(view);
             try {
                 LinearLayout linearLayout = view.findViewById(R.id.linearLayout);
                 linearLayout.setVisibility(View.GONE);
-                String jsonIn = new DirectionTask().execute(Util.GOOGLE_DIRECTION_URL + "origin=" + location.getLatitude() + "," + location.getLongitude() +
-                                                            "&destination=place_id:" + endLoc.getId() + "&key=" + getString(R.string.direction_key)).get();
+                String jsonIn = new DirectionTask().execute(Util.GOOGLE_DIRECTION_URL + "origin=" + callCarLocation.getLatitude() + "," + callCarLocation.getLongitude() +
+                                                            "&destination=place_id:" + takeOffLoc.getId() + "&key=" + getString(R.string.direction_key)).get();
                 JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
-                String encodeLine = jsonObject.get("routes").getAsJsonArray().get(0).getAsJsonObject().get("overview_polyline").getAsJsonObject().get("points").getAsString();
+                String encodeLine = jsonObject.get("routes")
+                                              .getAsJsonArray()
+                                              .get(0)
+                                              .getAsJsonObject()
+                                              .get("overview_polyline")
+                                              .getAsJsonObject()
+                                              .get("points")
+                                              .getAsString();
                 List<LatLng> latLngs = PolyUtil.decode(encodeLine);
                 map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(latLngs));
+                startLatLng = latLngs.get(0);
+                endLatLng = latLngs.get(latLngs.size() - 1);
                 Log.d(TAG, latLngs.toString());
             } catch (ExecutionException e) {
                 e.printStackTrace();
@@ -124,12 +134,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         } else
             bottomSheet.setVisibility(View.GONE);
 
-        mapFragment.getMapAsync(this);
         locationProviderClient = LocationServices.getFusedLocationProviderClient(activity);
+        Button button = view.findViewById(R.id.button);
+        button.setOnClickListener(v -> {
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("action", "getInPiCar");
+            jsonObject.addProperty("driverID", "D001");
+            jsonObject.addProperty("orderID", "SODR042");
+            new CommonTask().execute("/singleOrderApi", jsonObject.toString());
+        });
         return view;
     }
 
     private void bindBottomSheet(View view) {
+        Member member = activity.memberCallBack();
         ImageView callNormal = view.findViewById(R.id.callNormal);
         ImageView drunk = view.findViewById(R.id.drunk);
         final Button callCar = view.findViewById(R.id.callCar);
@@ -148,18 +166,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         callCar.setOnClickListener(view13 -> {
             Geocoder geocoder = new Geocoder(getActivity());
             try {
-                List<Address> addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                List<Address> addresses = geocoder.getFromLocation(callCarLocation.getLatitude(), callCarLocation.getLongitude(), 1);
                 if (!addresses.isEmpty()) {
                     Address address = addresses.get(0);
-                    singleOrder.setMemID("M001");
                     singleOrder.setStartLoc(address.getAddressLine(0));
                 }
 
-                singleOrder.setStartLat(location.getLatitude());
-                singleOrder.setStartLng(location.getLongitude());
-                singleOrder.setEndLoc((String) endLoc.getAddress());
-                singleOrder.setEndLat(endLoc.getLatLng().latitude);
-                singleOrder.setEndLng(endLoc.getLatLng().longitude);
+                singleOrder.setMemID(member.getMemID());
+                singleOrder.setStartLat(startLatLng.latitude);
+                singleOrder.setStartLng(startLatLng.longitude);
+                singleOrder.setEndLoc((String) takeOffLoc.getAddress());
+                singleOrder.setEndLat(endLatLng.latitude);
+                singleOrder.setEndLng(endLatLng.longitude);
                 singleOrder.setState(0);
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.addProperty("action", "insert");
@@ -197,10 +215,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public void onMapReady(GoogleMap googleMap) {
         map = googleMap;
         locationProviderClient.getLastLocation().addOnSuccessListener(activity, location -> {
-            MapFragment.this.location = location;
+            MapFragment.this.callCarLocation = location;
             LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
             CameraPosition cameraPosition;
-            if (endLoc == null) {
+            if (takeOffLoc == null) {
                 cameraPosition = new CameraPosition.Builder()
                                                    .target(latLng)
                                                    .zoom(15)
@@ -209,10 +227,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             } else {
                 LatLngBounds latLngBounds = LatLngBounds.builder()
                                                         .include(new LatLng(location.getLatitude(), location.getLongitude()))
-                                                        .include(endLoc.getLatLng())
+                                                        .include(takeOffLoc.getLatLng())
                                                         .build();
                 LatLng center = latLngBounds.getCenter();
-                center = new LatLng(center.latitude - Math.abs(endLoc.getLatLng().latitude - location.getLatitude()), center.longitude);
+                center = new LatLng(center.latitude - Math.abs(takeOffLoc.getLatLng().latitude - location.getLatitude()), center.longitude);
                 latLngBounds = latLngBounds.including(center);
                 Log.d(TAG, center.toString());
                 map.animateCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 100));
@@ -227,12 +245,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             String messsage;
             if (resultCode == Activity.RESULT_OK) {
                 String content = data.getStringExtra("SCAN_RESULT");
+                if (content != null && content.matches("^SODR\\d+$")) {
+                    // @TODO
+                }
             }
         }
     }
 
     public void onPlaceInputCallBack(Place place) {
-        this.endLoc = place;
+        this.takeOffLoc = place;
     }
 
     private void showDownloadDialog() {
@@ -252,7 +273,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private static class DirectionTask extends AsyncTask<String, Void, String> {
-        private final static String TAG = "CommonTask";
+        private final static String TAG = "DirectionTask";
 
         @Override
         protected String doInBackground(String... strings) {

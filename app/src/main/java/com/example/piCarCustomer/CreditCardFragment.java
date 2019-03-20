@@ -22,7 +22,7 @@ import com.google.gson.JsonObject;
 
 public class CreditCardFragment extends Fragment {
     private final static String TAG = "CreditCardFragment";
-    private MemberCallBack memberCallBack;
+    private MainActivity activity;
     TextView textViewCardNumber;
     TextInputLayout textInputLayout;
     EditText editTextCardNumInput;
@@ -33,7 +33,7 @@ public class CreditCardFragment extends Fragment {
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        memberCallBack = (MemberCallBack) context;
+        activity = (MainActivity) context;
     }
 
     @Nullable
@@ -41,7 +41,7 @@ public class CreditCardFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_credit_card, container, false);
-        Member member = memberCallBack.memberCallBack();
+        Member member = activity.memberCallBack();
         String creditCard = member.getCreditCard();
         textViewCardNumber = view.findViewById(R.id.creditCardNum);
         textInputLayout = view.findViewById(R.id.textInputLayout);
@@ -51,6 +51,8 @@ public class CreditCardFragment extends Fragment {
         btnCancel = view.findViewById(R.id.btnCancel);
         if (creditCard != null)
             textViewCardNumber.setText(creditCard);
+        else
+            textViewCardNumber.setText("xxxx-xxxx-xxxx-xxxx");
 
         btnConfirm.setOnClickListener(v -> viewToggle());
         editTextCardNumInput.addTextChangedListener(new TextWatcher() {
@@ -95,13 +97,14 @@ public class CreditCardFragment extends Fragment {
                 jsonObject.addProperty("creditCard", cardNum);
                 jsonObject.addProperty("memID", member.getMemID());
                 new CommonTask().execute("/memberApi", jsonObject.toString());
-                getFragmentManager().popBackStack();
+                member.setCreditCard(cardNum);
+                viewToggle();
             }
         });
         btnCancel.setOnClickListener(v -> {
             textViewCardNumber.setText(member.getCreditCard());
             viewToggle();
-            InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Activity.INPUT_METHOD_SERVICE);
+            InputMethodManager imm = (InputMethodManager) activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
         });
         return view;

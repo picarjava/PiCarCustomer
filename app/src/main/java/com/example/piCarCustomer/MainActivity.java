@@ -44,8 +44,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         ImageView hamburger = findViewById(R.id.hamburger);
         hamburger.setOnClickListener(v -> drawer.openDrawer(Gravity.START));
