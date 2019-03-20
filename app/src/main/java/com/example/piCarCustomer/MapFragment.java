@@ -140,7 +140,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("action", "getInPiCar");
             jsonObject.addProperty("driverID", "D001");
-            jsonObject.addProperty("orderID", "SODR042");
+            jsonObject.addProperty("orderID", "SODR013");
             new CommonTask().execute("/singleOrderApi", jsonObject.toString());
         });
         return view;
@@ -268,7 +268,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                            } catch (ActivityNotFoundException e) {
                                Log.e(e.toString(), "play store not found");
                            }
-                       }).setPositiveButton("no", (d, i)-> d.cancel())
+                       }).setNegativeButton("no", (d, i)-> d.cancel())
                        .show();
     }
 
