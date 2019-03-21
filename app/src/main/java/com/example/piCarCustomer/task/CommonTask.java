@@ -2,7 +2,7 @@ package com.example.piCarCustomer.task;
 
 import android.os.AsyncTask;
 
-import com.example.piCarCustomer.Util;
+import com.example.piCarCustomer.Constant;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -13,11 +13,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class CommonTask extends AsyncTask<String, Void, String> {
+    private final static String TAG = "CommonTask";
 
     @Override
     protected String doInBackground(String... strings) {
         try {
-            HttpURLConnection connection = (HttpURLConnection) new URL(Util.URL + strings[0]).openConnection();
+            HttpURLConnection connection = (HttpURLConnection) new URL(Constant.URL + strings[0]).openConnection();
             connection.setDoInput(true);
             connection.setDoInput(true);
             connection.setUseCaches(false);

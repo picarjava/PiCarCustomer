@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="250dp"
+    android:background="@color/white">
+
+    <ImageView
+        android:id="@+id/callNormal"
+        android:layout_width="130dp"
+        android:layout_height="130dp"
+        android:layout_marginTop="16dp"
+        android:contentDescription="call"
+        android:src="@color/focused"
+        app:layout_constraintEnd_toStartOf="@+id/drunk"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:srcCompat="@tools:sample/avatars" />
+
+    <ImageView
+        android:id="@+id/drunk"
+        android:layout_width="130dp"
+        android:layout_height="130dp"
+        android:contentDescription="drunk"
+        android:src="@drawable/dot_disabled"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toEndOf="@+id/callNormal"
+        app:layout_constraintTop_toTopOf="@+id/callNormal"
+        tools:srcCompat="@tools:sample/avatars" />
+
+    <Button
+        android:id="@+id/callCar"
+        android:layout_width="349dp"
+        android:layout_height="67dp"
+        android:layout_marginTop="164dp"
+        android:layout_marginBottom="8dp"
+        android:text="叫車服務"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.272" />
+</android.support.constraint.ConstraintLayout>

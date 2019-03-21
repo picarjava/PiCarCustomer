@@ -106,11 +106,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (takeOffLoc != null) {
             Log.i(TAG, "success get takeOffLoc");
             bottomSheet.setVisibility(View.VISIBLE);
-            bindBottomSheet(view);
+            int distance = 0;
             try {
                 LinearLayout linearLayout = view.findViewById(R.id.linearLayout);
                 linearLayout.setVisibility(View.GONE);
-                String jsonIn = new DirectionTask().execute(Util.GOOGLE_DIRECTION_URL + "origin=" + callCarLocation.getLatitude() + "," + callCarLocation.getLongitude() +
+                String jsonIn = new DirectionTask().execute(Constant.GOOGLE_DIRECTION_URL + "origin=" + callCarLocation.getLatitude() + "," + callCarLocation.getLongitude() +
                                                             "&destination=place_id:" + takeOffLoc.getId() + "&key=" + getString(R.string.direction_key)).get();
                 JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
                 String encodeLine = jsonObject.get("routes")
@@ -121,6 +121,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                               .getAsJsonObject()
                                               .get("points")
                                               .getAsString();
+                distance = jsonObject.get("routes")
+                                     .getAsJsonArray()
+                                     .get(0)
+                                     .getAsJsonObject()
+                                     .get("legs")
+                                     .getAsJsonArray()
+                                     .get(0)
+                                     .getAsJsonObject()
+                                     .get("distance")
+                                     .getAsJsonObject()
+                                     .get("value")
+                                     .getAsInt();
                 List<LatLng> latLngs = PolyUtil.decode(encodeLine);
                 map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(latLngs));
                 startLatLng = latLngs.get(0);
@@ -131,6 +143,24 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+
+//            Bundle bundle = new Bundle();
+//            Geocoder geocoder = new Geocoder(activity);
+//            try {
+//                List<Address> addresses = geocoder.getFromLocation(callCarLocation.getLatitude(), callCarLocation.getLongitude(), 1);
+//                if (!addresses.isEmpty())
+//                    bundle.putString("startLoc", addresses.get(0).getAddressLine(0));
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//
+//            bundle.putString("endLoc", (String) takeOffLoc.getAddress());
+//            bundle.putParcelable("startLatLng", startLatLng);
+//            bundle.putParcelable("endLatLng", endLatLng);
+//            CallCarBottomSheetFragment callCarBottomSheetFragment = new CallCarBottomSheetFragment();
+//            callCarBottomSheetFragment.setArguments(bundle);
+//            callCarBottomSheetFragment.show(getChildFragmentManager(), callCarBottomSheetFragment.getTag());
+            bindBottomSheet(view, distance);
         } else
             bottomSheet.setVisibility(View.GONE);
 
@@ -146,31 +176,29 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return view;
     }
 
-    private void bindBottomSheet(View view) {
+    private void bindBottomSheet(View view, int distance) {
         Member member = activity.memberCallBack();
         ImageView callNormal = view.findViewById(R.id.callNormal);
         ImageView drunk = view.findViewById(R.id.drunk);
         final Button callCar = view.findViewById(R.id.callCar);
         final SingleOrder singleOrder = new SingleOrder();
         callNormal.setOnClickListener(view1 -> {
-            singleOrder.setOrderType(Util.NORMAL);
+            singleOrder.setOrderType(Constant.NORMAL);
             callCar.setText("一般叫車");
             callCar.setVisibility(View.VISIBLE);
         });
         drunk.setOnClickListener(view12 -> {
-            singleOrder.setOrderType(Util.DRUNK);
+            singleOrder.setOrderType(Constant.DRUNK);
             callCar.setText("代駕");
             callCar.setVisibility(View.VISIBLE);
         });
 
         callCar.setOnClickListener(view13 -> {
-            Geocoder geocoder = new Geocoder(getActivity());
+            Geocoder geocoder = new Geocoder(activity);
             try {
                 List<Address> addresses = geocoder.getFromLocation(callCarLocation.getLatitude(), callCarLocation.getLongitude(), 1);
-                if (!addresses.isEmpty()) {
-                    Address address = addresses.get(0);
-                    singleOrder.setStartLoc(address.getAddressLine(0));
-                }
+                if (!addresses.isEmpty())
+                    singleOrder.setStartLoc(addresses.get(0).getAddressLine(0));
 
                 singleOrder.setMemID(member.getMemID());
                 singleOrder.setStartLat(startLatLng.latitude);
@@ -178,10 +206,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 singleOrder.setEndLoc((String) takeOffLoc.getAddress());
                 singleOrder.setEndLat(endLatLng.latitude);
                 singleOrder.setEndLng(endLatLng.longitude);
-                singleOrder.setState(0);
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.addProperty("action", "insert");
                 jsonObject.addProperty("singleOrder", new Gson().toJson(singleOrder));
+                jsonObject.addProperty("distance", distance);
                 bottomSheet.setVisibility(View.GONE);
                 String jsonIn;
                 try {
@@ -242,11 +270,32 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == RES_SCANNER) {
-            String messsage;
             if (resultCode == Activity.RESULT_OK) {
                 String content = data.getStringExtra("SCAN_RESULT");
-                if (content != null && content.matches("^SODR\\d+$")) {
-                    // @TODO
+                if (content != null) {
+                    String url;
+                    Gson gson = new Gson();
+                    JsonObject jsonObject = gson.fromJson(content, JsonObject.class);
+                    JsonObject parameter = new JsonObject();
+                    parameter.addProperty(Constant.DRIVER_ID, jsonObject.get(Constant.DRIVER_ID).getAsString());
+                    if (jsonObject.has(Constant.ORDER_ID)) {
+                        String orderID = jsonObject.get(Constant.ORDER_ID).getAsString();
+                        if (orderID.matches("^SODR\\d+$")) {
+                            jsonObject.addProperty(Constant.ORDER_ID, orderID);
+                            url = "/singleOrderApi";
+                        } else
+                            return;
+                    } else if (jsonObject.has(Constant.GROUP_ID)) {
+                        String groupID = jsonObject.get(Constant.GROUP_ID).getAsString();
+                        if (groupID.matches("^GODR\\d+$")) {
+                            jsonObject.addProperty(Constant.GROUP_ID, groupID);
+                            url = "/groupOrderApi";
+                        } else
+                            return;
+                    } else
+                        return;
+
+                    new CommonTask().execute(url, parameter.toString()).execute();
                 }
             }
         }

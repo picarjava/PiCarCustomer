@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         hamburger.setOnClickListener(v -> drawer.openDrawer(Gravity.START));
         navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
-        preferences = getSharedPreferences(Util.preference, MODE_PRIVATE);
+        preferences = getSharedPreferences(Constant.preference, MODE_PRIVATE);
         // ask Permission
         askPermissions();
         Log.d(TAG, "create");

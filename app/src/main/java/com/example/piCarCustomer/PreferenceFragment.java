@@ -28,7 +28,7 @@ public class PreferenceFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_preference, container, false);
-        final SharedPreferences preferences = getContext().getSharedPreferences(Util.preference, Context.MODE_PRIVATE);
+        final SharedPreferences preferences = getContext().getSharedPreferences(Constant.preference, Context.MODE_PRIVATE);
         final Switch smoke = view.findViewById(R.id.smoke);
         final Switch pet = view.findViewById(R.id.pet);
         final Switch babySeat = view.findViewById(R.id.babySeat);
