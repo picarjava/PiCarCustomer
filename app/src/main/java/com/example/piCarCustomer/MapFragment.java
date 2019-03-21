@@ -144,22 +144,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 e.printStackTrace();
             }
 
-//            Bundle bundle = new Bundle();
-//            Geocoder geocoder = new Geocoder(activity);
-//            try {
-//                List<Address> addresses = geocoder.getFromLocation(callCarLocation.getLatitude(), callCarLocation.getLongitude(), 1);
-//                if (!addresses.isEmpty())
-//                    bundle.putString("startLoc", addresses.get(0).getAddressLine(0));
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//
-//            bundle.putString("endLoc", (String) takeOffLoc.getAddress());
-//            bundle.putParcelable("startLatLng", startLatLng);
-//            bundle.putParcelable("endLatLng", endLatLng);
-//            CallCarBottomSheetFragment callCarBottomSheetFragment = new CallCarBottomSheetFragment();
-//            callCarBottomSheetFragment.setArguments(bundle);
-//            callCarBottomSheetFragment.show(getChildFragmentManager(), callCarBottomSheetFragment.getTag());
             bindBottomSheet(view, distance);
         } else
             bottomSheet.setVisibility(View.GONE);
@@ -226,6 +210,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     bundle.putString("carType", carType);
                     bottomSheetDialogFragment.setArguments(bundle);
                     bottomSheetDialogFragment.show(getChildFragmentManager(), bottomSheetDialogFragment.getTag());
+                    map.clear();
                 } catch (ExecutionException e) {
                     e.printStackTrace();
                 } catch (InterruptedException e) {
