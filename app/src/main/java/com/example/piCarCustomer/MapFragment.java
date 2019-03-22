@@ -177,7 +177,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             callCar.setVisibility(View.VISIBLE);
         });
 
-        callCar.setOnClickListener(view13 -> {
+        callCar.setOnClickListener(v -> {
             Geocoder geocoder = new Geocoder(activity);
             try {
                 List<Address> addresses = geocoder.getFromLocation(callCarLocation.getLatitude(), callCarLocation.getLongitude(), 1);
@@ -200,14 +200,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     jsonIn = new CommonTask().execute("/singleOrderApi", jsonObject.toString()).get();
                     Gson gson = new Gson();
                     jsonObject = gson.fromJson(jsonIn, JsonObject.class);
-                    String driverName = jsonObject.get("driverName").getAsString();
-                    String plateNum = jsonObject.get("plateNum").getAsString();
-                    String carType = jsonObject.get("carType").getAsString();
+                    String state = jsonObject.get("state").getAsString();
                     BottomSheetDialogFragment bottomSheetDialogFragment = new BottomSheetFragment();
                     Bundle bundle = new Bundle();
-                    bundle.putString("driverName", driverName);
-                    bundle.putString("plateNum", plateNum);
-                    bundle.putString("carType", carType);
+                    if ("Success".equals(state)) {
+                        bundle.putString("state", "Success");
+                        bundle.putString("driverName", jsonObject.get("driverName").getAsString());
+                        bundle.putString("plateNum", jsonObject.get("plateNum").getAsString());
+                        bundle.putString("carType", jsonObject.get("carType").getAsString());
+                    } else
+                        bundle.putString("state", "Failed");
+
                     bottomSheetDialogFragment.setArguments(bundle);
                     bottomSheetDialogFragment.show(getChildFragmentManager(), bottomSheetDialogFragment.getTag());
                     map.clear();
