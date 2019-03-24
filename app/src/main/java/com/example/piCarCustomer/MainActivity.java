@@ -226,7 +226,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
 
         if (!permissionRequest.isEmpty()) {
-            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[permissionRequest.size()]), PERMISSION_REQUEST);
+            ActivityCompat.requestPermissions(this, permissionRequest.toArray(new String[0]), PERMISSION_REQUEST);
         }
     }
 

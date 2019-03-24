@@ -12,6 +12,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.BottomSheetDialogFragment;
@@ -44,15 +45,19 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.maps.android.PolyUtil;
 
+import org.java_websocket.client.WebSocketClient;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class MapFragment extends Fragment implements OnMapReadyCallback {
+public class MapFragment extends Fragment implements OnMapReadyCallback, WebSocketHandler.WebSocketCallBack {
     private final static String TAG = "MapFragment";
     private final static int RES_SCANNER = 0;
     private final static String SCANNER_PACKAGE = "com.google.zxing.client.android";
@@ -62,7 +67,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private Place takeOffLoc;
     private LatLng startLatLng, endLatLng;
     private GoogleMap map;
+    private LinearLayout linearLayout;
     private NestedScrollView bottomSheet;
+    private Member member;
+    private WebSocketClient orderBroadcastWebSocket;
+    private int distance;
+    private AsyncTask directionTask;
+    private Handler handler;
 
     @Override
     public void onAttach(Context context) {
@@ -76,6 +87,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_map, container, false);
+        handler = new WebSocketHandler(this);
+        member = activity.memberCallBack();
         bottomSheet = view.findViewById(R.id.bottomSheet);
         TextView whereGo = view.findViewById(R.id.whereGo);
         FloatingActionButton fab = view.findViewById(R.id.fab);
@@ -88,11 +101,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 showDownloadDialog();
             }
         });
-        whereGo.setOnClickListener(view1 -> activity.getSupportFragmentManager()
-                                                    .beginTransaction()
-                                                    .replace(R.id.frameLayout, new LocationInputFragment(), "locationInput")
-                                                    .addToBackStack("locationInput")
-                                                    .commit());
+        whereGo.setOnClickListener(v -> activity.getSupportFragmentManager()
+                                                .beginTransaction()
+                                                .replace(R.id.frameLayout, new LocationInputFragment(), "locationInput")
+                                                .addToBackStack("locationInput")
+                                                .commit());
         SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map);
         if (mapFragment == null) {
             mapFragment = SupportMapFragment.newInstance();
@@ -106,45 +119,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (takeOffLoc != null) {
             Log.i(TAG, "success get takeOffLoc");
             bottomSheet.setVisibility(View.VISIBLE);
-            int distance = 0;
-            try {
-                LinearLayout linearLayout = view.findViewById(R.id.linearLayout);
-                linearLayout.setVisibility(View.GONE);
-                String jsonIn = new DirectionTask().execute(Constant.GOOGLE_DIRECTION_URL + "origin=" + callCarLocation.getLatitude() + "," + callCarLocation.getLongitude() +
-                                                            "&destination=place_id:" + takeOffLoc.getId() + "&key=" + getString(R.string.direction_key)).get();
-                JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
-                String encodeLine = jsonObject.get("routes")
-                                              .getAsJsonArray()
-                                              .get(0)
-                                              .getAsJsonObject()
-                                              .get("overview_polyline")
-                                              .getAsJsonObject()
-                                              .get("points")
-                                              .getAsString();
-                distance = jsonObject.get("routes")
-                                     .getAsJsonArray()
-                                     .get(0)
-                                     .getAsJsonObject()
-                                     .get("legs")
-                                     .getAsJsonArray()
-                                     .get(0)
-                                     .getAsJsonObject()
-                                     .get("distance")
-                                     .getAsJsonObject()
-                                     .get("value")
-                                     .getAsInt();
-                List<LatLng> latLngs = PolyUtil.decode(encodeLine);
-                map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(latLngs));
-                startLatLng = latLngs.get(0);
-                endLatLng = latLngs.get(latLngs.size() - 1);
-                Log.d(TAG, latLngs.toString());
-            } catch (ExecutionException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            bindBottomSheet(view, distance);
+            bindBottomSheet(view);
+            linearLayout = view.findViewById(R.id.linearLayout);
+            linearLayout.setVisibility(View.GONE);
+            directionTask = new DirectionTask(this).execute(Constant.GOOGLE_DIRECTION_URL + "origin=" + callCarLocation.getLatitude() + "," + callCarLocation.getLongitude() +
+                                                                         "&destination=place_id:" + takeOffLoc.getId() + "&key=" + getString(R.string.direction_key));
+            getNewWebSocket();
         } else
             bottomSheet.setVisibility(View.GONE);
 
@@ -160,8 +140,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return view;
     }
 
-    private void bindBottomSheet(View view, int distance) {
-        Member member = activity.memberCallBack();
+    @Override
+    public void onPause() {
+        super.onPause();
+        closeWebSocket();
+        if (directionTask != null)
+            directionTask.cancel(true);
+    }
+
+    private void bindBottomSheet(View view) {
         ImageView callNormal = view.findViewById(R.id.callNormal);
         ImageView drunk = view.findViewById(R.id.drunk);
         final Button callCar = view.findViewById(R.id.callCar);
@@ -311,6 +298,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private static class DirectionTask extends AsyncTask<String, Void, String> {
         private final static String TAG = "DirectionTask";
+        private MapFragment mapFragment;
+
+        DirectionTask(MapFragment mapFragment) {
+            this.mapFragment = mapFragment;
+        }
 
         @Override
         protected String doInBackground(String... strings) {
@@ -337,5 +329,59 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             return null;
         }
+
+        @Override
+        protected void onPostExecute(String jsonIn) {
+            JsonObject jsonObject = new Gson().fromJson(jsonIn, JsonObject.class);
+            String encodeLine = jsonObject.get("routes")
+                                          .getAsJsonArray()
+                                          .get(0)
+                                          .getAsJsonObject()
+                                          .get("overview_polyline")
+                                          .getAsJsonObject()
+                                          .get("points")
+                                          .getAsString();
+            mapFragment.distance = jsonObject.get("routes")
+                                             .getAsJsonArray()
+                                             .get(0)
+                                             .getAsJsonObject()
+                                             .get("legs")
+                                             .getAsJsonArray()
+                                             .get(0)
+                                             .getAsJsonObject()
+                                             .get("distance")
+                                             .getAsJsonObject()
+                                             .get("value")
+                                             .getAsInt();
+            List<LatLng> latLngs = PolyUtil.decode(encodeLine);
+            mapFragment.map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(latLngs));
+            mapFragment.startLatLng = latLngs.get(0);
+            mapFragment.endLatLng = latLngs.get(latLngs.size() - 1);
+            Log.d(TAG, latLngs.toString());
+        }
+    }
+
+    private void getNewWebSocket() {
+        if (orderBroadcastWebSocket == null || !orderBroadcastWebSocket.isOpen()) {
+            try {
+                URI uri = new URI(Constant.WEB_SOCKET_URL + "/orderBroadcastWebSocket/" + member.getMemID());
+                Log.d(TAG, uri.toString());
+                orderBroadcastWebSocket = new OrderBroadcastWebSocket(handler, uri);
+                orderBroadcastWebSocket.connect();
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void setInputVisible() {
+        linearLayout.setVisibility(View.VISIBLE);
+        closeWebSocket();
+    }
+
+    private void closeWebSocket() {
+        if (orderBroadcastWebSocket != null && orderBroadcastWebSocket.isOpen())
+            orderBroadcastWebSocket.close();
     }
 }

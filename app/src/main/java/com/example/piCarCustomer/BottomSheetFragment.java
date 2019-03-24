@@ -10,10 +10,6 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 public class BottomSheetFragment extends BottomSheetDialogFragment {
-    public interface InputVisiblity {
-
-    }
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
