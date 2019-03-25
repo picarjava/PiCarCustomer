@@ -28,6 +28,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.piCarCustomer.task.CommonTask;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -74,6 +75,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     private int distance;
     private AsyncTask directionTask;
     private Handler handler;
+    private boolean init;
 
     @Override
     public void onAttach(Context context) {
@@ -91,6 +93,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         member = activity.memberCallBack();
         bottomSheet = view.findViewById(R.id.bottomSheet);
         TextView whereGo = view.findViewById(R.id.whereGo);
+        linearLayout = view.findViewById(R.id.linearLayout);
         FloatingActionButton fab = view.findViewById(R.id.fab);
         fab.setOnClickListener(v -> {
             Intent intent = new Intent(SCANNER_PACKAGE + ".SCAN");
@@ -120,11 +123,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             Log.i(TAG, "success get takeOffLoc");
             bottomSheet.setVisibility(View.VISIBLE);
             bindBottomSheet(view);
-            linearLayout = view.findViewById(R.id.linearLayout);
             linearLayout.setVisibility(View.GONE);
             directionTask = new DirectionTask(this).execute(Constant.GOOGLE_DIRECTION_URL + "origin=" + callCarLocation.getLatitude() + "," + callCarLocation.getLongitude() +
                                                                          "&destination=place_id:" + takeOffLoc.getId() + "&key=" + getString(R.string.direction_key));
-            getNewWebSocket();
         } else
             bottomSheet.setVisibility(View.GONE);
 
@@ -148,6 +149,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             directionTask.cancel(true);
     }
 
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        Log.d(TAG, "save");
+        outState.putInt("linearLayoutVisibility", linearLayout.getVisibility());
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        if (savedInstanceState != null)
+            linearLayout.setVisibility(savedInstanceState.getInt("linearLayoutVisibility", View.VISIBLE));
+    }
+
     private void bindBottomSheet(View view) {
         ImageView callNormal = view.findViewById(R.id.callNormal);
         ImageView drunk = view.findViewById(R.id.drunk);
@@ -167,6 +182,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         callCar.setOnClickListener(v -> {
             Geocoder geocoder = new Geocoder(activity);
             try {
+                getNewWebSocket();
                 List<Address> addresses = geocoder.getFromLocation(callCarLocation.getLatitude(), callCarLocation.getLongitude(), 1);
                 if (!addresses.isEmpty())
                     singleOrder.setStartLoc(addresses.get(0).getAddressLine(0));
@@ -179,7 +195,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                 singleOrder.setEndLng(endLatLng.longitude);
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.addProperty("action", "insert");
-                jsonObject.addProperty("singleOrder", new Gson().toJson(singleOrder));
+                jsonObject.add("singleOrder", new Gson().toJsonTree(singleOrder));
                 jsonObject.addProperty("distance", distance);
                 bottomSheet.setVisibility(View.GONE);
                 String jsonIn;
@@ -195,8 +211,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                         bundle.putString("driverName", jsonObject.get("driverName").getAsString());
                         bundle.putString("plateNum", jsonObject.get("plateNum").getAsString());
                         bundle.putString("carType", jsonObject.get("carType").getAsString());
-                    } else
+                    } else {
+                        linearLayout.setVisibility(View.VISIBLE);
                         bundle.putString("state", "Failed");
+                    }
 
                     bottomSheetDialogFragment.setArguments(bundle);
                     bottomSheetDialogFragment.show(getChildFragmentManager(), bottomSheetDialogFragment.getTag());
@@ -227,18 +245,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                                    .zoom(15)
                                                    .build();
                 map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-            } else {
-                LatLngBounds latLngBounds = LatLngBounds.builder()
-                                                        .include(new LatLng(location.getLatitude(), location.getLongitude()))
-                                                        .include(takeOffLoc.getLatLng())
-                                                        .build();
-                LatLng center = latLngBounds.getCenter();
-                center = new LatLng(center.latitude - Math.abs(takeOffLoc.getLatLng().latitude - location.getLatitude()), center.longitude);
-                latLngBounds = latLngBounds.including(center);
-                Log.d(TAG, center.toString());
-                map.animateCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 100));
-                map.setMyLocationEnabled(true);
-            }
+            } else
+                focusOnRoute();
         });
     }
 
@@ -248,6 +256,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             if (resultCode == Activity.RESULT_OK) {
                 String content = data.getStringExtra("SCAN_RESULT");
                 if (content != null) {
+                    linearLayout.setVisibility(View.INVISIBLE);
                     String url;
                     Gson gson = new Gson();
                     JsonObject jsonObject = gson.fromJson(content, JsonObject.class);
@@ -270,6 +279,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                     } else
                         return;
 
+                    getNewWebSocket();
                     new CommonTask().execute(url, parameter.toString()).execute();
                 }
             }
@@ -377,11 +387,49 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
     @Override
     public void setInputVisible() {
         linearLayout.setVisibility(View.VISIBLE);
+        Toast.makeText(activity, "訂單已完成", Toast.LENGTH_SHORT).show();
         closeWebSocket();
+    }
+
+    @Override
+    public void drawDirection(List<LatLng> list, boolean isGetIn) {
+        map.clear();
+        map.addPolyline(new PolylineOptions().color(Color.DKGRAY).width(10).addAll(list));
+        if (isGetIn) {
+            CameraPosition cameraPosition = new CameraPosition.Builder()
+                                                              .target(list.get(0))
+                                                              .zoom(17)
+                                                              .build();
+            map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        } else {
+            if (!init) {
+                LatLng lastLatLng = list.get(list.size() - 1);
+                LatLngBounds latLngBounds = LatLngBounds.builder()
+                        .include(list.get(0))
+                        .include(lastLatLng)
+                        .build();
+                LatLng center = latLngBounds.getCenter();
+                center = new LatLng(center.latitude - Math.abs(lastLatLng.latitude - list.get(0).latitude), center.longitude);
+                latLngBounds = latLngBounds.including(center);
+                map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 100));
+                init = true;
+            }
+        }
     }
 
     private void closeWebSocket() {
         if (orderBroadcastWebSocket != null && orderBroadcastWebSocket.isOpen())
             orderBroadcastWebSocket.close();
+    }
+
+    private void focusOnRoute() {
+        LatLngBounds latLngBounds = LatLngBounds.builder()
+                .include(new LatLng(callCarLocation.getLatitude(), callCarLocation.getLongitude()))
+                .include(takeOffLoc.getLatLng())
+                .build();
+        LatLng center = latLngBounds.getCenter();
+        center = new LatLng(center.latitude - Math.abs(takeOffLoc.getLatLng().latitude - callCarLocation.getLatitude()), center.longitude);
+        latLngBounds = latLngBounds.including(center);
+        map.animateCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 100));
     }
 }

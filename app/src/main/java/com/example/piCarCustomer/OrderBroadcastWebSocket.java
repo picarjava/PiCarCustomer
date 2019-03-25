@@ -28,9 +28,16 @@ public class OrderBroadcastWebSocket extends WebSocketClient {
 
     @Override
     public void onMessage(String message) {
+        Log.d(TAG, message);
         Gson gson = new Gson();
         JsonObject jsonObject = gson.fromJson(message, JsonObject.class);
-        handler.obtainMessage(WebSocketHandler.GET_OFF_SUCCEED, jsonObject.get("state").getAsString()).sendToTarget();
+        if (jsonObject.has("state")) {
+            String state = jsonObject.get("state").getAsString();
+            if ("success".equals(state))
+                handler.obtainMessage(WebSocketHandler.GET_OFF_SUCCEED, state).sendToTarget();
+            else
+                handler.obtainMessage(WebSocketHandler.GET_DIRECTION, message).sendToTarget();
+        }
     }
 
     @Override

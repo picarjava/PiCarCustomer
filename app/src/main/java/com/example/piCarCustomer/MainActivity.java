@@ -184,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                                .apply();
                     member = new GsonBuilder().setDateFormat("yyyy-MM-dd")
                                               .create()
-                                              .fromJson(jsonObject.get("member").getAsString(), Member.class);
+                                              .fromJson(jsonObject.get("member"), Member.class);
                     jsonObject = new JsonObject();
                     jsonObject.addProperty("action", "getPicture");
                     jsonObject.addProperty("memID", member.getMemID());
