@@ -1,7 +1,6 @@
 package com.example.piCarCustomer;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -239,12 +238,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         });
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.e(TAG, "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
-    }
-
     public void onPlaceInputCallBack(Place place) {
         this.takeOffLoc = place;
     }
@@ -345,6 +338,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
     @Override
     public void setInputVisible() {
+        init = false;
+        map.clear();
         linearLayout.setVisibility(View.VISIBLE);
         Toast.makeText(activity, "訂單已完成", Toast.LENGTH_SHORT).show();
         closeWebSocket();
@@ -392,19 +387,25 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                                                               .target(list.get(0))
                                                               .zoom(17)
                                                               .build();
+            map.addMarker(new MarkerOptions().position(list.get(0)).icon(BitmapDescriptorFactory.fromBitmap(((BitmapDrawable) activity.getPhoto()).getBitmap())));
             map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
         } else {
             if (!init) {
                 LatLng lastLatLng = list.get(list.size() - 1);
+                callCarLocation.setLatitude(lastLatLng.latitude);
+                callCarLocation.setLongitude(lastLatLng.longitude);
                 LatLngBounds latLngBounds = LatLngBounds.builder()
-                        .include(list.get(0))
-                        .include(lastLatLng)
-                        .build();
+                                                        .include(list.get(0))
+                                                        .include(lastLatLng)
+                                                        .build();
                 LatLng center = latLngBounds.getCenter();
                 center = new LatLng(center.latitude - Math.abs(lastLatLng.latitude - list.get(0).latitude), center.longitude);
                 latLngBounds = latLngBounds.including(center);
-                map.addMarker(new MarkerOptions().position(lastLatLng).icon(BitmapDescriptorFactory.fromBitmap(((BitmapDrawable) activity.getPhoto()).getBitmap())));
+
                 map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 100));
+                if (map.getCameraPosition().zoom > 19) {
+                    map.moveCamera(CameraUpdateFactory.zoomBy(19));
+                }
                 init = true;
             }
         }
