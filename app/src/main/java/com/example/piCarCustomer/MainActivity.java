@@ -1,6 +1,7 @@
 package com.example.piCarCustomer;
 
 import android.Manifest;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -38,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private final static String TAG = "MainActivity";
     private final static int REQ_LOGIN = 0;
     private final static int PERMISSION_REQUEST = 0;
+    private final static int RES_SCANNER = 1;
     private Member member;
     private SharedPreferences preferences;
     private NavigationView navigationView;
@@ -56,6 +58,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         // ask Permission
         askPermissions();
         Log.d(TAG, "create");
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.frameLayout, new MapFragment(), "Map")
+                .commit();
         if (preferences.getBoolean("login", false)) {
             String account = preferences.getString("account", "");
             String password = preferences.getString("password", "");
@@ -72,15 +77,14 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     protected void onStart() {
         super.onStart();
         Log.d(TAG, "start");
+
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         Log.d(TAG, "resume");
-        getSupportFragmentManager().beginTransaction()
-                                   .replace(R.id.frameLayout, new MapFragment(), "Map")
-                                   .commit();
+
     }
 
     @Override
@@ -155,7 +159,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+        Log.e(TAG, "sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss");
+        Log.e(TAG, String.valueOf(requestCode));
+        Log.e(TAG, String.valueOf(resultCode));
         if (resultCode == RESULT_OK) {
             if (requestCode == REQ_LOGIN) {
                 String account = data.getStringExtra("account");
@@ -164,6 +170,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     startActivityForResult(new Intent(this, LoginActivity.class), REQ_LOGIN);
                 else
                     setLoginInfo();
+            } else if (requestCode == RES_SCANNER) {
+                Log.e(TAG, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+                String content = data.getStringExtra("SCAN_RESULT");
+                MapFragment mapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag("Map");
+                if (mapFragment != null) {
+                    mapFragment.getInCar(content);
+                }
             }
         }
     }
@@ -252,6 +265,31 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     }
 
                 break;
+        }
+    }
+
+    private static class HoldingTask extends AsyncTask<Void, Void, Void> {
+        private final static String TAG = "HoldingTask";
+        private MapFragment mapFragment;
+
+        HoldingTask(MapFragment mapFragment, Void orderAdapterType) {
+            this.mapFragment = mapFragment;
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try {
+                while (!mapFragment.isResumed())
+                    Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
         }
     }
 

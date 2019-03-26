@@ -63,8 +63,8 @@ import java.util.concurrent.ExecutionException;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback, WebSocketHandler.WebSocketCallBack {
     private final static String TAG = "MapFragment";
-    private final static int RES_SCANNER = 0;
     private final static String SCANNER_PACKAGE = "com.google.zxing.client.android";
+    private final static int RES_SCANNER = 1;
     private FusedLocationProviderClient locationProviderClient;
     private MainActivity activity;
     private Location callCarLocation;
@@ -101,7 +101,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         fab.setOnClickListener(v -> {
             Intent intent = new Intent(SCANNER_PACKAGE + ".SCAN");
             try {
-                startActivityForResult(intent, 0);
+                activity.startActivityForResult(intent, RES_SCANNER);
             } catch (ActivityNotFoundException e) {
                 Log.d(TAG, "not find scanner package");
                 showDownloadDialog();
@@ -150,20 +150,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         closeWebSocket();
         if (directionTask != null)
             directionTask.cancel(true);
-    }
-
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
-        Log.d(TAG, "save");
-        outState.putInt("linearLayoutVisibility", linearLayout.getVisibility());
-    }
-
-    @Override
-    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
-        super.onViewStateRestored(savedInstanceState);
-        if (savedInstanceState != null)
-            linearLayout.setVisibility(savedInstanceState.getInt("linearLayoutVisibility", View.VISIBLE));
     }
 
     private void bindBottomSheet(View view) {
@@ -255,38 +241,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == RES_SCANNER) {
-            if (resultCode == Activity.RESULT_OK) {
-                String content = data.getStringExtra("SCAN_RESULT");
-                if (content != null) {
-                    linearLayout.setVisibility(View.INVISIBLE);
-                    String url;
-                    Gson gson = new Gson();
-                    JsonObject jsonObject = gson.fromJson(content, JsonObject.class);
-                    JsonObject parameter = new JsonObject();
-                    parameter.addProperty(Constant.DRIVER_ID, jsonObject.get(Constant.DRIVER_ID).getAsString());
-                    if (jsonObject.has(Constant.ORDER_ID)) {
-                        String orderID = jsonObject.get(Constant.ORDER_ID).getAsString();
-                        if (orderID.matches("^SODR\\d+$")) {
-                            jsonObject.addProperty(Constant.ORDER_ID, orderID);
-                            url = "/singleOrderApi";
-                        } else
-                            return;
-                    } else if (jsonObject.has(Constant.GROUP_ID)) {
-                        String groupID = jsonObject.get(Constant.GROUP_ID).getAsString();
-                        if (groupID.matches("^GODR\\d+$")) {
-                            jsonObject.addProperty(Constant.GROUP_ID, groupID);
-                            url = "/groupOrderApi";
-                        } else
-                            return;
-                    } else
-                        return;
-
-                    getNewWebSocket();
-                    new CommonTask().execute(url, parameter.toString()).execute();
-                }
-            }
-        }
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.e(TAG, "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD");
     }
 
     public void onPlaceInputCallBack(Place place) {
@@ -392,6 +348,39 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         linearLayout.setVisibility(View.VISIBLE);
         Toast.makeText(activity, "訂單已完成", Toast.LENGTH_SHORT).show();
         closeWebSocket();
+    }
+
+    public void getInCar(String content) {
+        if (content != null) {
+            Log.e(TAG, content);
+            linearLayout.setVisibility(View.INVISIBLE);
+            String url;
+            Gson gson = new Gson();
+            JsonObject jsonObject = gson.fromJson(content, JsonObject.class);
+            JsonObject parameter = new JsonObject();
+            parameter.addProperty("action", "getInPiCar");
+            parameter.addProperty(Constant.DRIVER_ID, jsonObject.get(Constant.DRIVER_ID).getAsString());
+            if (jsonObject.has(Constant.ORDER_ID)) {
+                String orderID = jsonObject.get(Constant.ORDER_ID).getAsString();
+                if (orderID.matches("^SODR\\d+$")) {
+                    parameter.addProperty(Constant.ORDER_ID, orderID);
+                    url = "/singleOrderApi";
+                } else
+                    return;
+            } else if (jsonObject.has(Constant.GROUP_ID)) {
+                String groupID = jsonObject.get(Constant.GROUP_ID).getAsString();
+                if (groupID.matches("^GODR\\d+$")) {
+                    parameter.addProperty(Constant.GROUP_ID, groupID);
+                    url = "/groupOrderApi";
+                } else
+                    return;
+            } else
+                return;
+
+            getNewWebSocket();
+            Log.e(TAG, parameter.toString());
+            new CommonTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, url, parameter.toString());
+        }
     }
 
     @Override
