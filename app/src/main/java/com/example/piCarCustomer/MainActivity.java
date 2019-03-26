@@ -4,8 +4,10 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.NavigationView;
@@ -39,6 +41,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private Member member;
     private SharedPreferences preferences;
     private NavigationView navigationView;
+    private AsyncTask imageTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +81,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         getSupportFragmentManager().beginTransaction()
                                    .replace(R.id.frameLayout, new MapFragment(), "Map")
                                    .commit();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (imageTask != null)
+            imageTask.cancel(true);
     }
 
     @Override
@@ -188,7 +198,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     jsonObject = new JsonObject();
                     jsonObject.addProperty("action", "getPicture");
                     jsonObject.addProperty("memID", member.getMemID());
-                    new ImageTask(this).execute("/memberApi", jsonObject.toString());
+                    imageTask = new ImageTask(this).execute("/memberApi", jsonObject.toString());
                     return false;
                 }
             }
@@ -248,5 +258,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public Member memberCallBack() {
         return member;
+    }
+
+    @Override
+    public Drawable getPhoto() {
+        ImageView headShot = navigationView.getHeaderView(0).findViewById(R.id.headShot);
+        return headShot.getDrawable();
     }
 }

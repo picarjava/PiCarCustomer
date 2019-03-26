@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -37,9 +38,11 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.libraries.places.compat.Place;
 import com.google.gson.Gson;
@@ -134,8 +137,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
         button.setOnClickListener(v -> {
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("action", "getInPiCar");
-            jsonObject.addProperty("driverID", "D001");
-            jsonObject.addProperty("orderID", "SODR013");
+            jsonObject.addProperty("driverID", "D004");
+            jsonObject.addProperty("orderID", "SODR066");
             new CommonTask().execute("/singleOrderApi", jsonObject.toString());
         });
         return view;
@@ -411,6 +414,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
                 LatLng center = latLngBounds.getCenter();
                 center = new LatLng(center.latitude - Math.abs(lastLatLng.latitude - list.get(0).latitude), center.longitude);
                 latLngBounds = latLngBounds.including(center);
+                map.addMarker(new MarkerOptions().position(lastLatLng).icon(BitmapDescriptorFactory.fromBitmap(((BitmapDrawable) activity.getPhoto()).getBitmap())));
                 map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 100));
                 init = true;
             }
