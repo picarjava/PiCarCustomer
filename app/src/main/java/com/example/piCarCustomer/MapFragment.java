@@ -354,6 +354,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             JsonObject jsonObject = gson.fromJson(content, JsonObject.class);
             JsonObject parameter = new JsonObject();
             parameter.addProperty("action", "getInPiCar");
+            parameter.addProperty("memID", member.getMemID());
             parameter.addProperty(Constant.DRIVER_ID, jsonObject.get(Constant.DRIVER_ID).getAsString());
             if (jsonObject.has(Constant.ORDER_ID)) {
                 String orderID = jsonObject.get(Constant.ORDER_ID).getAsString();
@@ -372,9 +373,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, WebSock
             } else
                 return;
 
-            getNewWebSocket();
-            Log.e(TAG, parameter.toString());
-            new CommonTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, url, parameter.toString());
+            try {
+                String jsonIn = new CommonTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, url, parameter.toString()).get();
+                jsonObject = gson.fromJson(jsonIn, JsonObject.class);
+                if (jsonObject.has("state") && "OK".equals(jsonObject.get("state").getAsString())) {
+                    getNewWebSocket();
+                    Log.e(TAG, parameter.toString());
+                } else
+                    Toast.makeText(activity, "不是正確司機", Toast.LENGTH_SHORT).show();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 

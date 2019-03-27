@@ -1,7 +1,6 @@
 package com.example.piCarCustomer;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -159,9 +158,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.e(TAG, "sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss");
-        Log.e(TAG, String.valueOf(requestCode));
-        Log.e(TAG, String.valueOf(resultCode));
         if (resultCode == RESULT_OK) {
             if (requestCode == REQ_LOGIN) {
                 String account = data.getStringExtra("account");
@@ -171,7 +167,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 else
                     setLoginInfo();
             } else if (requestCode == RES_SCANNER) {
-                Log.e(TAG, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
                 String content = data.getStringExtra("SCAN_RESULT");
                 MapFragment mapFragment = (MapFragment) getSupportFragmentManager().findFragmentByTag("Map");
                 if (mapFragment != null) {
