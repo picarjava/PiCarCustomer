@@ -47,6 +47,6 @@ public class OrderBroadcastWebSocket extends WebSocketClient {
 
     @Override
     public void onError(Exception ex) {
-
+        ex.printStackTrace();
     }
 }
